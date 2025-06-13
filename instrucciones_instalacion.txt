@@ -1,0 +1,157 @@
+INSTRUCCIONES DE INSTALACIÓN MIPECUARIO WEB BACKEND
+=================================================
+
+1. REQUISITOS PREVIOS
+---------------------
+1.1 Software Necesario:
+    - Python 3.x
+    - MySQL
+    - Git (opcional, para control de versiones)
+    - Ngrok
+
+1.2 Versiones Recomendadas:
+    - Python: 3.8 o superior
+    - MySQL: 8.0 o superior
+    - Ngrok: Última versión estable
+
+2. PREPARACIÓN DEL ENTORNO
+-------------------------
+2.1 Crear Entorno Virtual:
+    # En Windows:
+    python -m venv venv
+    
+    # En Linux/Mac:
+    python3 -m venv venv
+
+2.2 Activar Entorno Virtual:
+    # En Windows:
+    .\venv\Scripts\activate
+    
+    # En Linux/Mac:
+    source venv/bin/activate
+
+2.3 Instalar Dependencias:
+    pip install -r requirements.txt
+
+3. CONFIGURACIÓN DE BASE DE DATOS
+--------------------------------
+3.1 Crear Base de Datos:
+    - Abrir MySQL
+    - Crear nueva base de datos llamada 'mipecuario'
+    - Asegurarse de que el usuario tenga todos los privilegios
+
+3.2 Configurar Variables de Entorno:
+    Crear archivo .env en la raíz del proyecto con:
+    DB_USER=tu_usuario
+    DB_PASSWORD=tu_contraseña
+    DB_HOST=localhost
+    DB_NAME=mipecuario
+    DB_PORT=3306
+
+4. CONFIGURACIÓN DE NGROK
+------------------------
+4.1 Instalar Ngrok:
+    - Descargar ngrok desde https://ngrok.com/download
+    - Extraer el archivo en una ubicación accesible
+    - Agregar la ruta al PATH del sistema
+
+4.2 Configurar Token:
+    - El token ya está configurado en Aqui_empece.py:
+      ngrok.set_auth_token("2yIuyRMapqamMEwjFjIlK6s1T4o_4eXFEJyumwiVidi7EVcVQ")
+
+5. ESTRUCTURA DE ARCHIVOS
+------------------------
+5.1 Verificar que existan todos los archivos:
+    MiPecuarioWeb_BE/
+    ├── Aqui_empece.py
+    ├── Base_De_Datos_cam.py
+    ├── forms_DB_CAM.py
+    ├── routes.py
+    ├── esquemas.py
+    ├── requirements.txt
+    └── .env
+
+5.2 Permisos de Archivos:
+    - Asegurarse de que todos los archivos sean legibles
+    - En Linux/Mac: chmod 644 *.py
+
+6. EJECUCIÓN DEL PROYECTO
+------------------------
+6.1 Activar Entorno Virtual:
+    # En Windows:
+    .\venv\Scripts\activate
+    
+    # En Linux/Mac:
+    source venv/bin/activate
+
+6.2 Ejecutar la Aplicación:
+    python Aqui_empece.py
+
+7. VERIFICACIÓN
+--------------
+7.1 Probar Endpoints:
+    - Registro de usuario: POST http://localhost:5000/api/usuarionuevo
+    - Login: POST http://localhost:5000/api/auth/login
+    - Perfil de usuario: GET http://localhost:5000/api/user/profile
+
+7.2 Verificar Ngrok:
+    - La URL de ngrok se mostrará en la consola
+    - Probar la conexión usando la URL proporcionada
+
+8. SOLUCIÓN DE PROBLEMAS
+-----------------------
+8.1 Errores Comunes:
+    a) Error de dependencias:
+       pip install -r requirements.txt
+
+    b) Error de base de datos:
+       - Verificar credenciales en .env
+       - Comprobar que MySQL esté corriendo
+       - Verificar que la base de datos existe
+
+    c) Error de ngrok:
+       - Verificar que ngrok esté instalado
+       - Comprobar que el token es válido
+       - Verificar que el puerto 5000 está disponible
+
+    d) Error de permisos:
+       - Verificar permisos de archivos
+       - Ejecutar como administrador si es necesario
+
+9. MANTENIMIENTO
+---------------
+9.1 Actualizaciones:
+    - Mantener Python actualizado
+    - Actualizar dependencias periódicamente
+    - Mantener ngrok actualizado
+
+9.2 Backups:
+    - Hacer backup de la base de datos regularmente
+    - Mantener copias de los archivos de configuración
+
+10. NOTAS ADICIONALES
+--------------------
+10.1 Desarrollo:
+    - Usar un IDE como VS Code o PyCharm
+    - Configurar el entorno virtual en el IDE
+    - Usar control de versiones (Git)
+
+10.2 Producción:
+    - Cambiar JWT_SECRET_KEY
+    - Configurar CORS adecuadamente
+    - Usar HTTPS
+    - Implementar rate limiting
+
+11. CONTACTO Y SOPORTE
+---------------------
+Para problemas o dudas:
+- Revisar la documentación en documentacion_backend.txt
+- Verificar los logs de la aplicación
+- Consultar la documentación de las dependencias
+
+12. RECOMENDACIONES FINALES
+--------------------------
+- Mantener el entorno virtual activado mientras se trabaja
+- Hacer commits regulares si se usa Git
+- Documentar cualquier cambio en la configuración
+- Mantener un registro de las versiones de las dependencias 

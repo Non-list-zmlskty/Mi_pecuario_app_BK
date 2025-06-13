@@ -1,0 +1,245 @@
+DOCUMENTACIÓN BACKEND MIPECUARIO
+================================
+
+1. FLUJO DE EJECUCIÓN DETALLADO
+-------------------------------
+
+1.1 Inicio de la Aplicación (Aqui_empece.py):
+    - Carga de variables de entorno
+    - Inicialización de Flask
+    - Configuración de CORS
+    - Registro del Blueprint
+    - Configuración de ngrok
+    - Inicio del servidor Flask
+
+1.2 Configuración de Base de Datos (Base_De_Datos_cam.py):
+    - Carga de variables de entorno para DB
+    - Creación de URL de conexión
+    - Configuración del engine
+    - Configuración de la sesión
+    - Creación de la base declarativa
+
+1.3 Flujo de una Petición HTTP:
+    a) Registro de Usuario (/api/usuarionuevo):
+       - Recibe petición POST
+       - Valida datos
+       - Crea sesión DB
+       - Verifica usuario existente
+       - Crea nuevo usuario
+       - Guarda en DB
+       - Genera tokens JWT
+       - Retorna respuesta
+
+    b) Login (/api/auth/login):
+       - Recibe petición POST
+       - Obtiene credenciales
+       - Verifica usuario
+       - Verifica contraseña
+       - Genera tokens
+       - Retorna respuesta
+
+1.4 Rutas Protegidas:
+    - Verificación de token
+    - Decodificación de token
+    - Obtención de usuario actual
+    - Ejecución de ruta protegida
+    - Retorno de respuesta
+
+1.5 Manejo de Errores:
+    - Errores de validación
+    - Errores de base de datos
+    - Errores de autenticación
+    - Cierre de sesiones
+
+2. CONFIGURACIÓN DE ENGINE Y SESIÓN
+----------------------------------
+
+2.1 Engine (Motor de Base de Datos):
+    - Punto de entrada para conexión DB
+    - Manejo de pool de conexiones
+    - Traducción de operaciones SQLAlchemy a SQL
+    - Gestión de transacciones
+
+2.2 SessionLocal (Fábrica de Sesiones):
+    - Creación de sesiones
+    - Manejo de ciclo de vida de transacciones
+    - Contexto para operaciones DB
+
+2.3 Uso en el Código:
+    - Creación de sesión
+    - Realización de operaciones
+    - Confirmación de transacciones
+    - Manejo de errores
+    - Cierre de sesión
+
+3. JWT TOKENS
+------------
+
+3.1 Estructura de Tokens:
+    - Access Token (corta duración)
+    - Refresh Token (larga duración)
+    - Payload con información de usuario
+    - Firma con clave secreta
+
+3.2 Tipos de Tokens:
+    a) Access Token:
+       - Duración: 1 hora
+       - Uso: Acceso a rutas protegidas
+       - Envío: En cada petición
+       - Formato: Bearer token
+
+    b) Refresh Token:
+       - Duración: 30 días
+       - Uso: Obtención de nuevos access tokens
+       - Almacenamiento: Seguro
+       - Renovación: Automática
+
+3.3 Funciones en Backend:
+    - Generación de tokens
+    - Verificación de tokens
+    - Renovación de tokens
+    - Protección de rutas
+
+4. BLUEPRINT Y RUTAS
+-------------------
+
+4.1 Registro de Blueprint:
+    app.register_blueprint(api, url_prefix='/api')
+
+4.2 Funciones:
+    - Organización modular de rutas
+    - Prefijo común para todas las rutas
+    - Separación de lógica de rutas
+    - Facilidad de mantenimiento
+
+4.3 Estructura de URLs:
+    - Prefijo /api para todas las rutas
+    - Ejemplo: /api/usuarionuevo, /api/auth/login
+    - Configuración CORS específica
+    - Manejo de versiones de API
+
+5. ARCHIVOS DEL PROYECTO
+-----------------------
+
+5.1 Aqui_empece.py:
+    - Punto de entrada de la aplicación
+    - Configuración de Flask y CORS
+    - Configuración de ngrok
+    - Inicio del servidor
+
+5.2 Base_De_Datos_cam.py:
+    - Configuración de conexión DB
+    - Engine y sesiones
+    - Variables de entorno DB
+
+5.3 forms_DB_CAM.py:
+    - Modelos de base de datos
+    - Definición de tablas
+    - Relaciones entre modelos
+
+5.4 routes.py:
+    - Definición de rutas
+    - Lógica de negocio
+    - Manejo de autenticación
+    - Protección de rutas
+
+5.5 esquemas.py:
+    - Validación de datos
+    - Esquemas Pydantic
+    - Funciones de hash
+
+5.6 requirements.txt:
+    - Dependencias del proyecto
+    - Versiones específicas
+    - Herramientas necesarias
+
+6. CONSIDERACIONES DE SEGURIDAD
+------------------------------
+
+6.1 Autenticación:
+    - Uso de JWT tokens
+    - Hash de contraseñas
+    - Validación de datos
+    - Protección de rutas
+
+6.2 Base de Datos:
+    - Manejo seguro de sesiones
+    - Transacciones atómicas
+    - Cierre de conexiones
+    - Manejo de errores
+
+6.3 Variables de Entorno:
+    - Datos sensibles
+    - Configuración de DB
+    - Claves secretas
+    - Tokens de API
+
+7. FLUJO DE DATOS
+----------------
+
+7.1 Registro de Usuario:
+    Cliente → routes.py → esquemas.py → forms_DB_CAM.py → Base_De_Datos_cam.py → DB
+
+7.2 Login:
+    Cliente → routes.py → Validación → Generación de tokens → Respuesta
+
+7.3 Ruta Protegida:
+    Cliente → routes.py → Verificación token → Obtención usuario → Lógica → Respuesta
+
+8. MANEJO DE ERRORES
+-------------------
+
+8.1 Tipos de Errores:
+    - Validación de datos
+    - Base de datos
+    - Autenticación
+    - Autorización
+
+8.2 Respuestas de Error:
+    - Códigos HTTP apropiados
+    - Mensajes descriptivos
+    - Logging de errores
+    - Rollback de transacciones
+
+9. CONFIGURACIÓN DE DESARROLLO
+----------------------------
+
+9.1 Requisitos:
+    - Python 3.x
+    - MySQL
+    - Entorno virtual
+    - Dependencias del requirements.txt
+
+9.2 Variables de Entorno:
+    DB_USER=usuario
+    DB_PASSWORD=contraseña
+    DB_HOST=localhost
+    DB_NAME=mipecuario
+    DB_PORT=3306
+
+9.3 Inicio del Servidor:
+    - Activar entorno virtual
+    - Instalar dependencias
+    - Configurar variables de entorno
+    - Ejecutar Aqui_empece.py
+
+10. CONSIDERACIONES PARA PRODUCCIÓN
+---------------------------------
+
+10.1 Seguridad:
+    - Cambiar JWT_SECRET_KEY
+    - Configurar CORS adecuadamente
+    - Usar HTTPS
+    - Implementar rate limiting
+
+10.2 Base de Datos:
+    - Configurar pool de conexiones
+    - Implementar backups
+    - Monitorear rendimiento
+    - Optimizar consultas
+
+10.3 Logging:
+    - Configurar niveles de log
+    - Implementar rotación de logs
+    - Monitorear errores
+    - Seguimiento de actividad 

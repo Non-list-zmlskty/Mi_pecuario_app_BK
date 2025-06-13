@@ -1,0 +1,6 @@
+# Notas de avances
+# 1. Creación de requests desde el frontend para el backend
+# 1.1. Manejo de respuestas en el backend.
+# 2. Implementación de la base de datos mysql para almacenar información.
+# 2.1 instalación de sqlalchemy y pymysql
+
