@@ -1,5 +1,13 @@
 INSTRUCCIONES DE INSTALACIÓN MIPECUARIO WEB BACKEND
 =================================================
+0.0 estas son las instrucciones necesarias a seguir para la instalacion de este repositorio y sus dependencias
+
+
+
+
+
+
+
 
 1. REQUISITOS PREVIOS
 ---------------------
@@ -8,30 +16,41 @@ INSTRUCCIONES DE INSTALACIÓN MIPECUARIO WEB BACKEND
     - MySQL
     - Git (opcional, para control de versiones)
     - Ngrok
+    - Poetry (gestor de dependencias y entornos virtuales)
 
 1.2 Versiones Recomendadas:
     - Python: 3.8 o superior
     - MySQL: 8.0 o superior
     - Ngrok: Última versión estable
+    - Poetry: Última versión estable
 
-2. PREPARACIÓN DEL ENTORNO
--------------------------
-2.1 Crear Entorno Virtual:
-    # En Windows:
-    python -m venv venv
-    
-    # En Linux/Mac:
-    python3 -m venv venv
+2. PREPARACIÓN DEL ENTORNO CON POETRY
+-------------------------------------
+2.1 Instalar Poetry en el sistema (no dentro del repositorio):
+    - En Windows PowerShell, ejecuta:
+      (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
+    - Cierra y vuelve a abrir la terminal, o agrega Poetry al PATH si es necesario.
+    - Verifica la instalación con:
+      poetry --version
 
-2.2 Activar Entorno Virtual:
-    # En Windows:
-    .\venv\Scripts\activate
-    
-    # En Linux/Mac:
-    source venv/bin/activate
+2.2 Clonar el repositorio:
+    git clone <URL_DEL_REPOSITORIO>
+    cd <NOMBRE_DEL_REPOSITORIO>
 
-2.3 Instalar Dependencias:
-    pip install -r requirements.txt
+2.3 Instalar las dependencias del proyecto:
+    poetry install
+    # Esto creará un entorno virtual y descargará todas las dependencias listadas en pyproject.toml y poetry.lock.
+
+2.4 Activar el entorno virtual de Poetry:
+    poetry shell
+    # Ahora puedes ejecutar scripts y comandos dentro del entorno virtual.
+
+2.5 (Adicional) Si necesitas instalar nuevas dependencias:
+    poetry add <nombre_paquete>
+    # Para dependencias de desarrollo:
+    poetry add --dev <nombre_paquete>
+
+2.6 No es necesario instalar ni subir el entorno virtual al repositorio, Poetry lo gestiona automáticamente fuera de la carpeta del proyecto.
 
 3. CONFIGURACIÓN DE BASE DE DATOS
 --------------------------------
@@ -154,4 +173,23 @@ Para problemas o dudas:
 - Mantener el entorno virtual activado mientras se trabaja
 - Hacer commits regulares si se usa Git
 - Documentar cualquier cambio en la configuración
-- Mantener un registro de las versiones de las dependencias 
+- Mantener un registro de las versiones de las dependencias
+
+13. ACTUALIZACIÓN DE DEPENDENCIAS Y USO DE POETRY
+------------------------------------------------
+13.1 Instalación de Poetry:
+    - Cada usuario que desee instalar las dependencias con Poetry debe instalar Poetry en su sistema siguiendo el método oficial:
+      (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
+    - No se debe instalar Poetry dentro del repositorio.
+
+13.2 Actualizar todas las dependencias a sus últimas versiones permitidas:
+    poetry update
+
+13.3 Actualizar una dependencia específica:
+    poetry update <nombre_paquete>
+
+13.4 Cambiar la versión permitida de una dependencia:
+    poetry add <paquete>@<nueva_version>
+
+13.5 Más información:
+    - Consultar la documentación oficial: https://python-poetry.org/docs/

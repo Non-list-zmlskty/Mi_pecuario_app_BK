@@ -242,4 +242,22 @@ DOCUMENTACIÓN BACKEND MIPECUARIO
     - Configurar niveles de log
     - Implementar rotación de logs
     - Monitorear errores
-    - Seguimiento de actividad 
+    - Seguimiento de actividad
+
+11. ACTUALIZACIÓN DE DEPENDENCIAS Y USO DE POETRY
+------------------------------------------------
+- Cada usuario que desee instalar las dependencias con Poetry debe instalar Poetry en su sistema siguiendo el método oficial:
+  (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
+  No se debe instalar Poetry dentro del repositorio.
+
+- Para actualizar todas las dependencias a sus últimas versiones permitidas:
+  poetry update
+
+- Para actualizar una dependencia específica:
+  poetry update <nombre_paquete>
+
+- Para cambiar la versión permitida de una dependencia:
+  poetry add <paquete>@<nueva_version>
+
+- Más información:
+  Consultar la documentación oficial: https://python-poetry.org/docs/
