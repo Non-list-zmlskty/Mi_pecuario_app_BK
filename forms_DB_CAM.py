@@ -10,6 +10,9 @@ class Usuario(Base):
     nombre = Column(String(100))
     email = Column(String(100), unique=True)
     hashed_password = Column(String(128), nullable=False)
+    # Campos para recuperación por código
+    reset_code = Column(String(6), nullable=True)
+    reset_code_expiry = Column(DateTime, nullable=True)
 
 class Grupo(Base):
     __tablename__ = 'Grupo'
