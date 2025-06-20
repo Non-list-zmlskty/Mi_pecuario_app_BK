@@ -2,7 +2,7 @@
 
 from flask import Blueprint, request, jsonify
 from Base_De_Datos_cam import SessionLocal
-from forms_DB_CAM import Usuario
+from forms_DB_CAM import Usuario, Lote, Grupo, Animal  # Asegúrate de importar Lote
 from esquemas import hash_password, pwd_context, UsuarioCreate, UsuarioResponse
 from sqlalchemy.exc import SQLAlchemyError
 import logging
@@ -14,6 +14,8 @@ from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 import smtplib
 from email.mime.text import MIMEText
 from email.header import Header
+from email.mime.multipart import MIMEMultipart
+from email.mime.image import MIMEImage
 import random
 
 # Configurar logging
@@ -107,12 +109,44 @@ def send_reset_email(email, token):
         print(f"Error enviando correo: {str(e)}")
 
 def send_reset_code_email(email, code):
-    subject = str(Header("Código de recuperación de contraseña", "utf-8"))
-    body = f"Hola,\n\nTu código de recuperación es: {code}\n\nEste código es válido por 10 minutos. Si no solicitaste este código, ignora este correo."
-    msg = MIMEText(body, "plain", "utf-8")
+    import mimetypes
+    subject = str(Header(f"Código de verificación MiPecuarioApp: {code}", "utf-8"))
+    cid = "bannerimage"
+    body = f"""
+    <html>
+      <body>
+        <img src='cid:{cid}' alt='Mi Pecuario App' style='width:100%;max-width:600px;'><br><br>
+        <h2>Código de verificación MiPecuarioApp: {code}</h2>
+        <p>Estimado/a: {email}</p>
+        <p>Esperamos se encuentre bien. Hemos recibido una solicitud para el cambio de tu contraseña.</p>
+        <p><b>Código de verificación:</b></p>
+        <h1 style='color:#2e7d32;'>{code}</h1>
+        <p>Ingresa el código en la aplicación para demostrar que eres tú.</p>
+        <p>Si no solicitaste este código, ignora este correo.</p>
+        <br>
+        <p>Atentamente,<br>El equipo de programación M.P.A.</p>
+      </body>
+    </html>
+    """
+    msg = MIMEMultipart()
     msg['Subject'] = subject
     msg['From'] = SMTP_USER
     msg['To'] = email
+    msg.attach(MIMEText(body, "html", "utf-8"))
+    # Ruta de la imagen con extensión
+    image_path = r"C:\\Users\\Nslksss\\Pictures\\IMG_MPA_EMAIL\\Banner 1 Pecuario App.png"
+    try:
+        ctype, encoding = mimetypes.guess_type(image_path)
+        if ctype is None or not ctype.startswith('image/'):
+            raise ValueError('No se pudo determinar el tipo de imagen o no es una imagen válida')
+        maintype, subtype = ctype.split('/', 1)
+        with open(image_path, 'rb') as img_file:
+            img = MIMEImage(img_file.read(), _subtype=subtype)
+            img.add_header('Content-ID', '<bannerimage>')
+            img.add_header('Content-Disposition', 'inline', filename=os.path.basename(image_path))
+            msg.attach(img)
+    except Exception as e:
+        logger.error(f"No se pudo adjuntar la imagen: {str(e)}")
     try:
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             server.starttls()
@@ -130,6 +164,7 @@ def test_api():
         "timestamp": datetime.utcnow().isoformat()
     }), 200
 
+# 1. Registro de usuario
 @api.route('/usuarionuevo', methods=['POST'])
 def crear_usuario():
     data = request.get_json()
@@ -173,6 +208,7 @@ def crear_usuario():
     finally:
         db.close()
 
+# 2. Login de usuario
 @api.route('/auth/login', methods=['POST'])
 def auth_login():
     data = request.get_json()
@@ -192,6 +228,24 @@ def auth_login():
             if pwd_context.verify(password, str(usuario.hashed_password)):
                 access_token, refresh_token = generate_tokens(usuario.usuario_id)
                 
+                # --- Nueva lógica: verificar si tiene fichas (animales) ---
+                lotes_usuario = db.query(Lote.lote_id).filter_by(usuario_id=usuario.usuario_id).all()
+                lote_ids = [l.lote_id for l in lotes_usuario]
+                fichas = []
+                tiene_fichas = False
+                if lote_ids:
+                    animales = db.query(Animal).filter(Animal.lote_id.in_(lote_ids)).all()
+                    fichas = [
+                        {
+                            "id": animal.animal_id,
+                            "sexo": animal.sexo,
+                            "raza": animal.raza,
+                            "lote_id": animal.lote_id
+                        }
+                        for animal in animales
+                    ]
+                    tiene_fichas = len(fichas) > 0
+
                 logger.info(f"Login exitoso para usuario: {usuario.nombre}")
                 return jsonify({
                     "token": access_token,
@@ -200,7 +254,9 @@ def auth_login():
                         "id": str(usuario.usuario_id),
                         "name": usuario.nombre,
                         "email": usuario.email
-                    }
+                    },
+                    "tiene_fichas": tiene_fichas,
+                    "fichas": fichas  # El frontend puede usar esto para decidir qué mostrar
                 }), 200
         except Exception as e:
             if str(usuario.hashed_password) == password:
@@ -211,6 +267,24 @@ def auth_login():
                 
                 access_token, refresh_token = generate_tokens(usuario.usuario_id)
                 
+                # --- Nueva lógica: verificar si tiene fichas (animales) ---
+                lotes_usuario = db.query(Lote.lote_id).filter_by(usuario_id=usuario.usuario_id).all()
+                lote_ids = [l.lote_id for l in lotes_usuario]
+                fichas = []
+                tiene_fichas = False
+                if lote_ids:
+                    animales = db.query(Animal).filter(Animal.lote_id.in_(lote_ids)).all()
+                    fichas = [
+                        {
+                            "id": animal.animal_id,
+                            "sexo": animal.sexo,
+                            "raza": animal.raza,
+                            "lote_id": animal.lote_id
+                        }
+                        for animal in animales
+                    ]
+                    tiene_fichas = len(fichas) > 0
+
                 logger.info(f"Login exitoso y contraseña actualizada para usuario: {usuario.nombre}")
                 return jsonify({
                     "token": access_token,
@@ -219,7 +293,9 @@ def auth_login():
                         "id": str(usuario.usuario_id),
                         "name": usuario.nombre,
                         "email": usuario.email
-                    }
+                    },
+                    "tiene_fichas": tiene_fichas,
+                    "fichas": fichas
                 }), 200
 
         logger.warning(f"Intento de login fallido para correo: {email}")
@@ -359,11 +435,165 @@ def reset_password_with_code():
     finally:
         db.close()
 
-# --- FLUJO ANTERIOR POR ENLACE (OBSOLETO, REEMPLAZADO POR CÓDIGO DE 6 DÍGITOS) ---
-# @api.route('/auth/request-reset-password', methods=['POST'])
-# def request_reset_password():
+# 1. Registrar un lote (si el usuario no tiene lotes)
+@api.route('/lote/registrar', methods=['POST'])
+@token_required
+def registrar_lote(current_user):
+    """
+    Registra un nuevo lote de ganado para el usuario autenticado.
+    Espera: { "nombre": str, "grupo_id": int }
+    """
+    data = request.get_json()
+    if not data or 'nombre' not in data or 'grupo_id' not in data:
+        return jsonify({"error": "Faltan campos requeridos"}), 400
+
+    db = SessionLocal()
+    try:
+        nuevo_lote = Lote(
+            nombre=data['nombre'],
+            usuario_id=current_user.usuario_id,
+            grupo_id=data['grupo_id']
+        )
+        db.add(nuevo_lote)
+        db.commit()
+        db.refresh(nuevo_lote)
+        return jsonify({
+            "message": "Lote registrado exitosamente",
+            "lote": {
+                "id": nuevo_lote.lote_id,
+                "nombre": nuevo_lote.nombre,
+                "grupo_id": nuevo_lote.grupo_id
+            }
+        }), 201
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error al registrar lote: {str(e)}")
+        return jsonify({"error": "Error al registrar el lote"}), 500
+    finally:
+        db.close()
+
+# 2. Consultar lotes del usuario (para obtener el lote_id)
+@api.route('/lote/mis-lotes', methods=['GET'])
+@token_required
+def obtener_lotes_usuario(current_user):
+    """
+    Devuelve todos los lotes registrados por el usuario autenticado.
+    """
+    db = SessionLocal()
+    try:
+        lotes = db.query(Lote).filter_by(usuario_id=current_user.usuario_id).all()
+        lotes_data = [
+            {
+                "id": lote.lote_id,
+                "nombre": lote.nombre,
+                "grupo_id": lote.grupo_id
+            }
+            for lote in lotes
+        ]
+        return jsonify({"lotes": lotes_data}), 200
+    except Exception as e:
+        logger.error(f"Error al obtener lotes: {str(e)}")
+        return jsonify({"error": "Error al obtener los lotes"}), 500
+    finally:
+        db.close()
+
+# 3. Registrar ficha/grupo de animales (formulario de ingreso de ganado)
+@api.route('/ingreso/registrar', methods=['POST'])
+@token_required
+def registrar_ficha_grupo_animales(current_user):
+    """
+    Registra una ficha de grupo de animales.
+    Espera: { "genero": str, "proposito": str, "raza": str, "cantidad": int }
+    """
+    data = request.get_json()
+    required_fields = ['genero', 'proposito', 'raza', 'cantidad']
+    if not data or not all(field in data for field in required_fields):
+        return jsonify({"error": "Faltan campos requeridos"}), 400
+
+    db = SessionLocal()
+    try:
+        # Crear un nuevo lote automáticamente
+        nuevo_lote = Lote(
+            nombre=f"Lote {data['proposito']} {random.randint(1000,9999)}",
+            usuario_id=current_user.usuario_id,
+            grupo_id=None  # Si tienes lógica para grupo, puedes asignar aquí
+        )
+        db.add(nuevo_lote)
+        db.flush()  # Para obtener el lote_id
+
+        animales_creados = []
+        for i in range(data['cantidad']):
+            animal = Animal(
+                sexo=data['genero'],
+                raza=data['raza'],
+                lote_id=nuevo_lote.lote_id
+                # Si agregas 'proposito' al modelo Animal, agrega aquí: proposito=data['proposito']
+            )
+            db.add(animal)
+            animales_creados.append({
+                "id": None,  # Se asigna después del commit
+                "genero": data['genero'],
+                "raza": data['raza'],
+                "lote_id": nuevo_lote.lote_id
+                # "proposito": data['proposito']  # Si agregas el campo al modelo
+            })
+        db.commit()
+        # Asignar los ids después del commit
+        for idx, animal in enumerate(db.query(Animal).filter(Animal.lote_id == nuevo_lote.lote_id).order_by(Animal.animal_id).all()):
+            animales_creados[idx]["id"] = animal.animal_id
+
+        return jsonify({
+            "message": f"Ficha registrada exitosamente. {data['cantidad']} animales guardados.",
+            "lote_id": nuevo_lote.lote_id,
+            "animales": animales_creados
+        }), 201
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error al registrar ficha: {str(e)}")
+        return jsonify({"error": "Error al registrar la ficha"}), 500
+    finally:
+        db.close()
+
+# 4. Consultar fichas (animales) del usuario agrupadas por lote/ficha
+@api.route('/ingreso/mis-fichas', methods=['GET'])
+@token_required
+def obtener_fichas_usuario(current_user):
+    """
+    Devuelve las fichas (grupos de animales) registradas por el usuario, agrupadas por lote.
+    """
+    db = SessionLocal()
+    try:
+        # Obtener los lotes del usuario
+        lotes_usuario = db.query(Lote).filter_by(usuario_id=current_user.usuario_id).all()
+        fichas = []
+        for lote in lotes_usuario:
+            animales = db.query(Animal).filter(Animal.lote_id == lote.lote_id).all()
+            if not animales:
+                continue
+            # Se asume que todos los animales del lote tienen el mismo genero y raza (por diseño del formulario)
+            genero = animales[0].sexo
+            raza = animales[0].raza
+            cantidad = len(animales)
+            ficha = {
+                "lote_id": lote.lote_id,
+                "nombre_lote": lote.nombre,
+                "genero": genero,
+                "raza": raza,
+                "cantidad": cantidad
+            }
+            fichas.append(ficha)
+        return jsonify({"fichas": fichas}), 200
+    except Exception as e:
+        logger.error(f"Error al obtener fichas: {str(e)}")
+        return jsonify({"error": "Error al obtener las fichas"}), 500
+    finally:
+        db.close()
+
+# --- Edición de ficha ---
+# Es posible agregar un endpoint tipo PUT/PATCH para editar una ficha (animal) existente.
+# Ejemplo futuro:
+# @api.route('/ingreso/editar/<int:animal_id>', methods=['PUT'])
+# @token_required
+# def editar_animal(current_user, animal_id):
 #     ...
-# @api.route('/auth/confirm-reset-password', methods=['POST'])
-# def confirm_reset_password():
-#     ...
-# -------------------------------------------------------------------------------
+# ------------------------------------------------------------
