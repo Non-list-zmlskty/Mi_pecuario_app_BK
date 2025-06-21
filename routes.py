@@ -1,8 +1,11 @@
 # routes.py
+# ---------------------------------------------
+# Archivo principal de rutas y lógica de negocio
+# ---------------------------------------------
 
 from flask import Blueprint, request, jsonify
-from Base_De_Datos_cam import SessionLocal
-from forms_DB_CAM import Usuario, Lote, Grupo, Animal  # Asegúrate de importar Lote
+from Base_De_Datos_cam import SessionLocal  # Manejo de sesiones de base de datos
+from forms_DB_CAM import Usuario, Lote, Grupo, Animal  # Modelos principales
 from esquemas import hash_password, pwd_context, UsuarioCreate, UsuarioResponse
 from sqlalchemy.exc import SQLAlchemyError
 import logging
@@ -18,31 +21,42 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
 import random
 
-# Configurar logging
+# Configuración de logging para depuración y monitoreo
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Configuración de JWT
-JWT_SECRET_KEY = "tu_clave_secreta_muy_segura"  # En producción, usa una variable de entorno
+# -------------------
+# Configuración JWT
+# -------------------
+JWT_SECRET_KEY = "tu_clave_secreta_muy_segura"  # Cambiar en producción
 JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
 JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
 
-# Configuración para tokens de reseteo de contraseña
+# Serializador para tokens de reseteo de contraseña
 token_serializer = URLSafeTimedSerializer(JWT_SECRET_KEY)
 
-# Configuración SMTP (ajusta estos valores a tu proveedor)
+# -------------------
+# Configuración SMTP para envío de correos
+# -------------------
 SMTP_SERVER = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
 SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
 SMTP_USER = os.getenv('SMTP_USER', 'tu_email@gmail.com')
 SMTP_PASSWORD = os.getenv('SMTP_PASSWORD', 'tu_contraseña')
+RESET_PASSWORD_URL = os.getenv('RESET_PASSWORD_URL', 'http://localhost:3000/reset-password')
 
-RESET_PASSWORD_URL = os.getenv('RESET_PASSWORD_URL', 'http://localhost:3000/reset-password')  # URL del frontend
-
+# -------------------
+# Blueprint para modularidad de rutas
+# -------------------
 api = Blueprint('api', __name__)
 
-# Blocklist en memoria para tokens JWT revocados
-jwt_blocklist = set()
+# -------------------
+# Blocklist en memoria para tokens JWT revocados (logout)
+# -------------------
+jwt_blocklist = set()  # Aquí se guardan los tokens revocados
 
+# -------------------
+# Decorador para proteger rutas con JWT y blocklist
+# -------------------
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -53,15 +67,14 @@ def token_required(f):
                 token = auth_header.split(" ")[1]
             except IndexError:
                 return jsonify({"error": "Token inválido"}), 401
-
         if not token:
             return jsonify({"error": "Token no proporcionado"}), 401
-
         try:
             payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=['HS256'])
-            # Usar el token completo como identificador en la blocklist
+            # Verifica si el token está revocado
             if token in jwt_blocklist:
                 return jsonify({"error": "Token revocado"}), 401
+            # Obtiene el usuario autenticado
             current_user = SessionLocal().query(Usuario).filter_by(usuario_id=payload['user_id']).first()
         except jwt.ExpiredSignatureError:
             return jsonify({"error": "Token expirado"}), 401
@@ -69,12 +82,13 @@ def token_required(f):
             return jsonify({"error": "Token inválido"}), 401
         except Exception as e:
             return jsonify({"error": str(e)}), 401
-
         return f(current_user, *args, **kwargs)
     return decorated
 
+# -------------------
+# Función para generar access y refresh tokens
+# -------------------
 def generate_tokens(user_id):
-    # Generar access token
     access_token = jwt.encode(
         {
             'user_id': user_id,
@@ -83,8 +97,6 @@ def generate_tokens(user_id):
         JWT_SECRET_KEY,
         algorithm='HS256'
     )
-    
-    # Generar refresh token
     refresh_token = jwt.encode(
         {
             'user_id': user_id,
@@ -93,10 +105,11 @@ def generate_tokens(user_id):
         JWT_SECRET_KEY,
         algorithm='HS256'
     )
-    
     return access_token, refresh_token
 
-# Función para enviar email
+# -------------------
+# Funciones para envío de correos (recuperación de contraseña)
+# -------------------
 def send_reset_email(email, token):
     reset_link = f"{RESET_PASSWORD_URL}?token={token}"
     subject = str(Header("Restablece tu contraseña", "utf-8"))
@@ -654,3 +667,26 @@ def logout(current_user):
         return jsonify({"message": "Successfully logged out"}), 200
     except Exception as e:
         return jsonify({"error": "Token inválido"}), 401
+
+# NOTA: Para evitar errores de pool de conexiones, cada endpoint que use la base de datos debe:
+# 1. Abrir la sesión con db = SessionLocal()
+# 2. Usar try/except/finally y cerrar SIEMPRE con db.close()
+# 3. Hacer db.rollback() en except si hay error
+# 4. No compartir sesiones entre peticiones/hilos
+# 5. No abrir sesiones dentro de bucles sin cerrarlas
+# 6. No dejar sesiones abiertas en tareas en segundo plano
+# Si no se sigue esto, puedes tener errores como:
+# - QueuePool limit of size 5 overflow 10 reached, connection timed out
+# - Conexiones colgadas o lentitud
+# - Errores de concurrencia
+# - Estado inconsistente en la base de datos
+#
+# Ejemplo correcto:
+# db = SessionLocal()
+# try:
+#     ...operaciones...
+# except Exception as e:
+#     db.rollback()
+#     ...manejo de error...
+# finally:
+#     db.close()

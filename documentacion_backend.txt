@@ -7,23 +7,23 @@ DOCUMENTACIÓN BACKEND MIPECUARIO
 1.1 Inicio de la Aplicación (Aqui_empece.py):
     - Carga de variables de entorno
     - Inicialización de Flask
-    - Configuración de CORS
-    - Registro del Blueprint
-    - Configuración de ngrok
+    - Configuración de CORS (permite headers de autenticación)
+    - Registro del Blueprint de rutas
+    - Configuración de ngrok para exponer la API
     - Inicio del servidor Flask
 
 1.2 Configuración de Base de Datos (Base_De_Datos_cam.py):
     - Carga de variables de entorno para DB
     - Creación de URL de conexión
-    - Configuración del engine
-    - Configuración de la sesión
+    - Configuración del engine y pool de conexiones
+    - Configuración de la sesión (SessionLocal)
     - Creación de la base declarativa
 
 1.3 Flujo de una Petición HTTP:
     a) Registro de Usuario (/api/usuarionuevo):
        - Recibe petición POST
        - Valida datos
-       - Crea sesión DB
+       - Crea sesión DB (siempre se cierra con db.close())
        - Verifica usuario existente
        - Crea nuevo usuario
        - Guarda en DB
@@ -38,67 +38,64 @@ DOCUMENTACIÓN BACKEND MIPECUARIO
        - Genera tokens
        - Retorna respuesta
 
-1.4 Rutas Protegidas:
-    - Verificación de token
-    - Decodificación de token
-    - Obtención de usuario actual
-    - Ejecución de ruta protegida
-    - Retorno de respuesta
+    c) Logout seguro (/api/auth/logout):
+       - Recibe petición POST con token en header Authorization
+       - El decorador verifica el token y la blocklist
+       - El endpoint agrega el token a la blocklist (revoca el token)
+       - Retorna mensaje de éxito
 
-1.5 Manejo de Errores:
+    d) Rutas protegidas:
+       - Verificación de token y blocklist
+       - Decodificación de token
+       - Obtención de usuario actual
+       - Ejecución de lógica protegida
+       - Retorno de respuesta
+
+1.4 Manejo de Errores:
     - Errores de validación
-    - Errores de base de datos
-    - Errores de autenticación
-    - Cierre de sesiones
+    - Errores de base de datos (rollback y cierre de sesión)
+    - Errores de autenticación (token inválido, expirado, revocado)
+    - Cierre de sesiones siempre con finally
 
 2. CONFIGURACIÓN DE ENGINE Y SESIÓN
 ----------------------------------
 
 2.1 Engine (Motor de Base de Datos):
-    - Punto de entrada para conexión DB
     - Manejo de pool de conexiones
     - Traducción de operaciones SQLAlchemy a SQL
     - Gestión de transacciones
 
 2.2 SessionLocal (Fábrica de Sesiones):
-    - Creación de sesiones
+    - Creación y cierre de sesiones por petición
     - Manejo de ciclo de vida de transacciones
     - Contexto para operaciones DB
 
-2.3 Uso en el Código:
-    - Creación de sesión
-    - Realización de operaciones
-    - Confirmación de transacciones
-    - Manejo de errores
-    - Cierre de sesión
+2.3 Uso correcto en el Código:
+    - Siempre usar try/except/finally y cerrar la sesión con db.close()
+    - Hacer db.rollback() en except si hay error
+    - No compartir sesiones entre peticiones/hilos
+    - No abrir sesiones dentro de bucles sin cerrarlas
 
-3. JWT TOKENS
-------------
+3. JWT TOKENS Y BLOCKLIST
+-------------------------
 
 3.1 Estructura de Tokens:
-    - Access Token (corta duración)
-    - Refresh Token (larga duración)
+    - Access Token (corta duración, 1 hora)
+    - Refresh Token (larga duración, 30 días)
     - Payload con información de usuario
     - Firma con clave secreta
 
-3.2 Tipos de Tokens:
-    a) Access Token:
-       - Duración: 1 hora
-       - Uso: Acceso a rutas protegidas
-       - Envío: En cada petición
-       - Formato: Bearer token
+3.2 Blocklist (lista de tokens revocados):
+    - Implementada como un set en memoria
+    - Al hacer logout, el token se agrega a la blocklist
+    - El decorador verifica la blocklist en cada petición protegida
+    - Si el token está revocado, responde 401
 
-    b) Refresh Token:
-       - Duración: 30 días
-       - Uso: Obtención de nuevos access tokens
-       - Almacenamiento: Seguro
-       - Renovación: Automática
-
-3.3 Funciones en Backend:
-    - Generación de tokens
-    - Verificación de tokens
-    - Renovación de tokens
-    - Protección de rutas
+3.3 Flujo de Logout:
+    - Frontend envía POST /api/auth/logout con el token
+    - Backend agrega el token a la blocklist
+    - El token no puede usarse más, aunque no haya expirado
+    - El frontend elimina el token localmente y redirige al login
 
 4. BLUEPRINT Y RUTAS
 -------------------
@@ -106,158 +103,49 @@ DOCUMENTACIÓN BACKEND MIPECUARIO
 4.1 Registro de Blueprint:
     app.register_blueprint(api, url_prefix='/api')
 
-4.2 Funciones:
-    - Organización modular de rutas
-    - Prefijo común para todas las rutas
-    - Separación de lógica de rutas
-    - Facilidad de mantenimiento
+4.2 Organización modular de rutas y lógica de negocio
 
-4.3 Estructura de URLs:
-    - Prefijo /api para todas las rutas
-    - Ejemplo: /api/usuarionuevo, /api/auth/login
-    - Configuración CORS específica
-    - Manejo de versiones de API
+4.3 Ejemplo de rutas:
+    - /api/usuarionuevo (registro)
+    - /api/auth/login (login)
+    - /api/auth/logout (logout seguro)
+    - /api/user/profile (perfil protegido)
+    - /api/ingreso/mis-fichas (fichas protegidas)
 
-5. ARCHIVOS DEL PROYECTO
------------------------
-
-5.1 Aqui_empece.py:
-    - Punto de entrada de la aplicación
-    - Configuración de Flask y CORS
-    - Configuración de ngrok
-    - Inicio del servidor
-
-5.2 Base_De_Datos_cam.py:
-    - Configuración de conexión DB
-    - Engine y sesiones
-    - Variables de entorno DB
-
-5.3 forms_DB_CAM.py:
-    - Modelos de base de datos
-    - Definición de tablas
-    - Relaciones entre modelos
-
-5.4 routes.py:
-    - Definición de rutas
-    - Lógica de negocio
-    - Manejo de autenticación
-    - Protección de rutas
-
-5.5 esquemas.py:
-    - Validación de datos
-    - Esquemas Pydantic
-    - Funciones de hash
-
-5.6 requirements.txt:
-    - Dependencias del proyecto
-    - Versiones específicas
-    - Herramientas necesarias
-
-6. CONSIDERACIONES DE SEGURIDAD
+5. MANEJO DE SESIONES Y ERRORES
 ------------------------------
 
-6.1 Autenticación:
-    - Uso de JWT tokens
-    - Hash de contraseñas
-    - Validación de datos
-    - Protección de rutas
+5.1 Siempre cerrar la sesión con db.close() en finally
+5.2 Hacer db.rollback() en except si hay error
+5.3 No compartir sesiones entre peticiones/hilos
+5.4 No abrir sesiones dentro de bucles sin cerrarlas
+5.5 Si no se sigue esto, puedes tener errores como:
+    - QueuePool limit of size 5 overflow 10 reached, connection timed out
+    - Conexiones colgadas o lentitud
+    - Estado inconsistente en la base de datos
 
-6.2 Base de Datos:
-    - Manejo seguro de sesiones
-    - Transacciones atómicas
-    - Cierre de conexiones
-    - Manejo de errores
+6. SEGURIDAD Y BUENAS PRÁCTICAS
+-------------------------------
 
-6.3 Variables de Entorno:
-    - Datos sensibles
-    - Configuración de DB
-    - Claves secretas
-    - Tokens de API
+6.1 Cambiar JWT_SECRET_KEY en producción
+6.2 Configurar CORS adecuadamente
+6.3 Usar HTTPS en producción
+6.4 Implementar rate limiting si es necesario
+6.5 No exponer datos sensibles en respuestas
+6.6 Validar siempre los datos de entrada
 
-7. FLUJO DE DATOS
-----------------
+7. PRUEBAS Y USO DE POSTMAN
+---------------------------
 
-7.1 Registro de Usuario:
-    Cliente → routes.py → esquemas.py → forms_DB_CAM.py → Base_De_Datos_cam.py → DB
+7.1 Probar endpoints de login, registro, logout y rutas protegidas
+7.2 Enviar el token en el header Authorization: Bearer <token>
+7.3 Verificar que tras logout, el token no funcione más
+7.4 Verificar respuestas de error y mensajes claros
 
-7.2 Login:
-    Cliente → routes.py → Validación → Generación de tokens → Respuesta
-
-7.3 Ruta Protegida:
-    Cliente → routes.py → Verificación token → Obtención usuario → Lógica → Respuesta
-
-8. MANEJO DE ERRORES
--------------------
-
-8.1 Tipos de Errores:
-    - Validación de datos
-    - Base de datos
-    - Autenticación
-    - Autorización
-
-8.2 Respuestas de Error:
-    - Códigos HTTP apropiados
-    - Mensajes descriptivos
-    - Logging de errores
-    - Rollback de transacciones
-
-9. CONFIGURACIÓN DE DESARROLLO
-----------------------------
-
-9.1 Requisitos:
-    - Python 3.x
-    - MySQL
-    - Entorno virtual
-    - Dependencias del requirements.txt
-
-9.2 Variables de Entorno:
-    DB_USER=usuario
-    DB_PASSWORD=contraseña
-    DB_HOST=localhost
-    DB_NAME=mipecuario
-    DB_PORT=3306
-
-9.3 Inicio del Servidor:
-    - Activar entorno virtual
-    - Instalar dependencias
-    - Configurar variables de entorno
-    - Ejecutar Aqui_empece.py
-
-10. CONSIDERACIONES PARA PRODUCCIÓN
----------------------------------
-
-10.1 Seguridad:
-    - Cambiar JWT_SECRET_KEY
-    - Configurar CORS adecuadamente
-    - Usar HTTPS
-    - Implementar rate limiting
-
-10.2 Base de Datos:
-    - Configurar pool de conexiones
-    - Implementar backups
-    - Monitorear rendimiento
-    - Optimizar consultas
-
-10.3 Logging:
-    - Configurar niveles de log
-    - Implementar rotación de logs
-    - Monitorear errores
-    - Seguimiento de actividad
-
-11. ACTUALIZACIÓN DE DEPENDENCIAS Y USO DE POETRY
+8. ACTUALIZACIÓN DE DEPENDENCIAS Y USO DE POETRY
 ------------------------------------------------
-- Cada usuario que desee instalar las dependencias con Poetry debe instalar Poetry en su sistema siguiendo el método oficial:
-  (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
-  No se debe instalar Poetry dentro del repositorio.
-
-- Para actualizar todas las dependencias a sus últimas versiones permitidas:
-  poetry update
-
-- Para actualizar una dependencia específica:
-  poetry update <nombre_paquete>
-
-- Para cambiar la versión permitida de una dependencia:
-  poetry add <paquete>@<nueva_version>
-
-- Más información:
-  Consultar la documentación oficial: https://python-poetry.org/docs/
+- Instalar Poetry en el sistema (no dentro del repo)
+- poetry install para instalar dependencias
+- poetry update para actualizar
+- poetry shell para activar entorno virtual
+- Consultar la documentación oficial: https://python-poetry.org/docs/
