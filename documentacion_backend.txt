@@ -1,6 +1,7 @@
-Camila, realicé estos cambios debido a que consideré que la estructura y organización anterior podía verse muy hostil y larga, 
+"Camila, realicé estos cambios debido a que consideré que la estructura y organización anterior podía verse muy hostil y larga, 
 además de incomprensible por momentos. Busco que entiendas de la mejor forma todo lo que será dado en la organización de esta documentación.
- Cualquier cosa estaré pendiente a tu respuesta, pregunta todo y más sobre lo que entiendas y no entiendas o encuentres irrazonable - sin mucha dedicación, Juan.
+ Cualquier cosa estaré pendiente a tu respuesta, pregunta todo y más sobre lo que entiendas y no entiendas o encuentres irrazonable" -
+  sin mucha dedicación, Juan.
 
 DOCUMENTACIÓN BACKEND MIPECUARIO (2024)
 ========================================
