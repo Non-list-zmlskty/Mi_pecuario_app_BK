@@ -1,7 +1,6 @@
 from sqlalchemy.orm import Session
-            # from Base_De_Datos_cam import SessionLocal
-from forms_DB_CAM import Usuario
-from esquemas import UsuarioCreate, UsuarioResponse
+from models.models import Usuario
+from schemas.user import UsuarioCreate
 
 def get_user(db: Session):
     return db.query(Usuario).all()

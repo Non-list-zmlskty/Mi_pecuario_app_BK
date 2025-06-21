@@ -1,151 +1,163 @@
-DOCUMENTACIÓN BACKEND MIPECUARIO
-================================
+Camila, realicé estos cambios debido a que consideré que la estructura y organización anterior podía verse muy hostil y larga, 
+además de incomprensible por momentos. Busco que entiendas de la mejor forma todo lo que será dado en la organización de esta documentación.
+ Cualquier cosa estaré pendiente a tu respuesta, pregunta todo y más sobre lo que entiendas y no entiendas o encuentres irrazonable - sin mucha dedicación, Juan.
 
-1. FLUJO DE EJECUCIÓN DETALLADO
--------------------------------
+DOCUMENTACIÓN BACKEND MIPECUARIO (2024)
+========================================
 
-1.1 Inicio de la Aplicación (Aqui_empece.py):
-    - Carga de variables de entorno
-    - Inicialización de Flask
-    - Configuración de CORS (permite headers de autenticación)
-    - Registro del Blueprint de rutas
-    - Configuración de ngrok para exponer la API
-    - Inicio del servidor Flask
+# 1. ESTRUCTURA Y ORGANIZACIÓN DEL PROYECTO
+--------------------------------------------
+El backend ahora está organizado en módulos y Blueprints para que cada parte del sistema sea independiente, legible y fácil de mantener. Antes, todo estaba en un solo archivo grande, lo que dificultaba la comprensión y el mantenimiento. Ahora:
+- **routes/**: contiene los endpoints de la API, separados por dominio (auth, user, lote, animal).
+- **models/**: contiene los modelos SQLAlchemy que representan las tablas de la base de datos.
+- **db/session.py**: configuración de la conexión a la base de datos usando variables de entorno.
+- **schemas/**: validaciones y esquemas Pydantic.
+- **utils/**: utilidades como JWT, email, etc.
+- **legacy/**: archivos antiguos, solo referencia.
 
-1.2 Configuración de Base de Datos (Base_De_Datos_cam.py):
-    - Carga de variables de entorno para DB
-    - Creación de URL de conexión
-    - Configuración del engine y pool de conexiones
-    - Configuración de la sesión (SessionLocal)
-    - Creación de la base declarativa
-
-1.3 Flujo de una Petición HTTP:
-    a) Registro de Usuario (/api/usuarionuevo):
-       - Recibe petición POST
-       - Valida datos
-       - Crea sesión DB (siempre se cierra con db.close())
-       - Verifica usuario existente
-       - Crea nuevo usuario
-       - Guarda en DB
-       - Genera tokens JWT
-       - Retorna respuesta
-
-    b) Login (/api/auth/login):
-       - Recibe petición POST
-       - Obtiene credenciales
-       - Verifica usuario
-       - Verifica contraseña
-       - Genera tokens
-       - Retorna respuesta
-
-    c) Logout seguro (/api/auth/logout):
-       - Recibe petición POST con token en header Authorization
-       - El decorador verifica el token y la blocklist
-       - El endpoint agrega el token a la blocklist (revoca el token)
-       - Retorna mensaje de éxito
-
-    d) Rutas protegidas:
-       - Verificación de token y blocklist
-       - Decodificación de token
-       - Obtención de usuario actual
-       - Ejecución de lógica protegida
-       - Retorno de respuesta
-
-1.4 Manejo de Errores:
-    - Errores de validación
-    - Errores de base de datos (rollback y cierre de sesión)
-    - Errores de autenticación (token inválido, expirado, revocado)
-    - Cierre de sesiones siempre con finally
-
-2. CONFIGURACIÓN DE ENGINE Y SESIÓN
+# 2. CONEXIÓN CON LA BASE DE DATOS
 ----------------------------------
+La conexión se realiza en `db/session.py` usando SQLAlchemy y las variables de entorno del archivo `.env`. Ejemplo de conexión:
 
-2.1 Engine (Motor de Base de Datos):
-    - Manejo de pool de conexiones
-    - Traducción de operaciones SQLAlchemy a SQL
-    - Gestión de transacciones
+```
+DB_USER=usuario
+DB_PASSWORD=contraseña
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=MiPecuarioWed
+```
 
-2.2 SessionLocal (Fábrica de Sesiones):
-    - Creación y cierre de sesiones por petición
-    - Manejo de ciclo de vida de transacciones
-    - Contexto para operaciones DB
+El archivo `db/session.py` carga estas variables y crea el engine y la sesión para todas las operaciones con la base de datos.
 
-2.3 Uso correcto en el Código:
-    - Siempre usar try/except/finally y cerrar la sesión con db.close()
-    - Hacer db.rollback() en except si hay error
-    - No compartir sesiones entre peticiones/hilos
-    - No abrir sesiones dentro de bucles sin cerrarlas
-
-3. JWT TOKENS Y BLOCKLIST
--------------------------
-
-3.1 Estructura de Tokens:
-    - Access Token (corta duración, 1 hora)
-    - Refresh Token (larga duración, 30 días)
-    - Payload con información de usuario
-    - Firma con clave secreta
-
-3.2 Blocklist (lista de tokens revocados):
-    - Implementada como un set en memoria
-    - Al hacer logout, el token se agrega a la blocklist
-    - El decorador verifica la blocklist en cada petición protegida
-    - Si el token está revocado, responde 401
-
-3.3 Flujo de Logout:
-    - Frontend envía POST /api/auth/logout con el token
-    - Backend agrega el token a la blocklist
-    - El token no puede usarse más, aunque no haya expirado
-    - El frontend elimina el token localmente y redirige al login
-
-4. BLUEPRINT Y RUTAS
--------------------
-
-4.1 Registro de Blueprint:
-    app.register_blueprint(api, url_prefix='/api')
-
-4.2 Organización modular de rutas y lógica de negocio
-
-4.3 Ejemplo de rutas:
-    - /api/usuarionuevo (registro)
-    - /api/auth/login (login)
-    - /api/auth/logout (logout seguro)
-    - /api/user/profile (perfil protegido)
-    - /api/ingreso/mis-fichas (fichas protegidas)
-
-5. MANEJO DE SESIONES Y ERRORES
-------------------------------
-
-5.1 Siempre cerrar la sesión con db.close() en finally
-5.2 Hacer db.rollback() en except si hay error
-5.3 No compartir sesiones entre peticiones/hilos
-5.4 No abrir sesiones dentro de bucles sin cerrarlas
-5.5 Si no se sigue esto, puedes tener errores como:
-    - QueuePool limit of size 5 overflow 10 reached, connection timed out
-    - Conexiones colgadas o lentitud
-    - Estado inconsistente en la base de datos
-
-6. SEGURIDAD Y BUENAS PRÁCTICAS
+# 3. MODELOS (models/models.py)
 -------------------------------
+Cada clase representa una tabla en la base de datos. Ejemplo:
+- **Usuario**: usuarios del sistema.
+- **Lote**: lotes de ganado asociados a un usuario.
+- **Animal**: animales asociados a un lote.
+- **Grupo, Alimento, NutriAlimento, SeguimientoAlimento, PesoLote, Alertas**: otras entidades relacionadas.
 
-6.1 Cambiar JWT_SECRET_KEY en producción
-6.2 Configurar CORS adecuadamente
-6.3 Usar HTTPS en producción
-6.4 Implementar rate limiting si es necesario
-6.5 No exponer datos sensibles en respuestas
-6.6 Validar siempre los datos de entrada
+Cada modelo hereda de `Base` y define sus columnas y relaciones.
 
-7. PRUEBAS Y USO DE POSTMAN
----------------------------
+# 4. RUTAS Y ENDPOINTS (routes/)
+---------------------------------
+Cada archivo en `routes/` es un Blueprint de Flask que agrupa endpoints relacionados.
 
-7.1 Probar endpoints de login, registro, logout y rutas protegidas
-7.2 Enviar el token en el header Authorization: Bearer <token>
-7.3 Verificar que tras logout, el token no funcione más
-7.4 Verificar respuestas de error y mensajes claros
+## 4.1. animal_routes.py
+- **/api/animal/registrar [POST]**: Registra un grupo de animales en un nuevo lote.
+  - **Body JSON ejemplo:**
+    ```json
+    {
+      "genero": "Hembra",
+      "proposito": "Lechera",
+      "raza": "Holstein",
+      "cantidad": 10
+    }
+    ```
+  - **Respuesta exitosa:**
+    ```json
+    {
+      "message": "Ficha registrada exitosamente. 10 animales guardados.",
+      "lote_id": 5,
+      "animales": [
+        {"id": 21, "genero": "Hembra", "raza": "Holstein", "lote_id": 5},
+        ...
+      ]
+    }
+    ```
+- **/api/animal/mis-fichas [GET]**: Devuelve todas las fichas (grupos de animales) del usuario, agrupadas por lote.
+  - **Respuesta ejemplo:**
+    ```json
+    {
+      "fichas": [
+        {"lote_id": 5, "nombre_lote": "Lote Lechera 1234", "genero": "Hembra", "raza": "Holstein", "cantidad": 10},
+        ...
+      ]
+    }
+    ```
 
-8. ACTUALIZACIÓN DE DEPENDENCIAS Y USO DE POETRY
+## 4.2. lote_routes.py
+- **/api/lote/registrar [POST]**: Registra un nuevo lote para el usuario autenticado.
+  - **Body JSON ejemplo:**
+    ```json
+    {"nombre": "Lote 1", "grupo_id": 2}
+    ```
+- **/api/lote/mis-lotes [GET]**: Devuelve todos los lotes del usuario.
+
+## 4.3. Cálculos de animales (peso promedio y total)
+- Puedes agregar un endpoint tipo `/api/animal/calculo-pesos` que reciba género, propósito y cantidad, y devuelva el peso promedio individual y total:
+  - **Body JSON ejemplo:**
+    ```json
+    {"genero": "Hembra", "proposito": "Lechera", "cantidad": 10}
+    ```
+  - **Respuesta ejemplo:**
+    ```json
+    {"peso_promedio_individual": 550, "peso_total_lote": 5500, "genero": "Hembra", "proposito": "Lechera", "cantidad": 10}
+    ```
+
+# NUEVO: CONSULTA DETALLADA DE FICHA POR LOTE
+---------------------------------------------
+- **/api/animal/ficha/<lote_id> [GET]**: Devuelve los datos y cálculos de la ficha seleccionada (lote).
+  - **Uso:** El frontend puede cambiar de ficha (lote) y mostrar los datos y cálculos correspondientes sin recalcular en el cliente.
+  - **Respuesta ejemplo:**
+    ```json
+    {
+      "lote_id": 5,
+      "nombre_lote": "Lote Lechera 1234",
+      "genero": "Hembra",
+      "proposito": "Lechera",
+      "raza": "Holstein",
+      "cantidad": 100,
+      "peso_promedio_individual": 550,
+      "peso_total_lote": 55000
+    }
+    ```
+- **Intención:** Permitir que el frontend consulte y muestre los datos y cálculos de cualquier ficha/lote de forma dinámica, facilitando la navegación y el análisis para el usuario.
+- **Mensaje para Camila:** Ahora puedes ver cómo cada ficha (lote) puede ser consultada de forma independiente y los cálculos se hacen en el backend, asegurando consistencia y facilidad de uso para el frontend.
+
+# 5. FORMULARIO DE REGISTRO DE GANADO (FRONTEND)
 ------------------------------------------------
-- Instalar Poetry en el sistema (no dentro del repo)
-- poetry install para instalar dependencias
-- poetry update para actualizar
-- poetry shell para activar entorno virtual
-- Consultar la documentación oficial: https://python-poetry.org/docs/
+El formulario que ves en la app móvil envía los datos a `/api/animal/registrar` usando los campos género, propósito, raza y cantidad. El backend los recibe, crea el lote y los animales, y responde con la información registrada.
+
+# 6. CASOS DE USO Y PRUEBAS CON POSTMAN
+---------------------------------------
+- **Registrar animales:**
+  - Endpoint: POST `/api/animal/registrar`
+  - Body: (ver ejemplo arriba)
+  - Header: Authorization: Bearer <token>
+- **Consultar fichas:**
+  - Endpoint: GET `/api/animal/mis-fichas`
+  - Header: Authorization: Bearer <token>
+- **Registrar lote:**
+  - Endpoint: POST `/api/lote/registrar`
+  - Body: {"nombre": "Lote 1", "grupo_id": 2}
+  - Header: Authorization: Bearer <token>
+- **Consultar lotes:**
+  - Endpoint: GET `/api/lote/mis-lotes`
+  - Header: Authorization: Bearer <token>
+
+# 7. POR QUÉ SE CAMBIÓ LA ORGANIZACIÓN
+--------------------------------------
+Antes, todo estaba en un solo archivo, lo que hacía difícil entender, mantener y escalar el sistema. Ahora, cada parte está separada:
+- **Rutas**: cada dominio tiene su archivo.
+- **Modelos**: todos en un solo lugar.
+- **Conexión a base de datos**: centralizada y usando variables de entorno.
+- **Utilidades**: JWT, email, etc., en archivos aparte.
+Esto facilita el trabajo en equipo, la depuración y la extensión del sistema.
+
+# 8. MENSAJES Y UTILIDAD DE CADA PARTE DEL CÓDIGO
+--------------------------------------------------
+- **routes/animal_routes.py**: lógica de registro y consulta de animales.
+- **routes/lote_routes.py**: lógica de registro y consulta de lotes.
+- **models/models.py**: definición de las tablas y relaciones de la base de datos.
+- **db/session.py**: conexión y sesión con la base de datos.
+- **utils/jwt_utils.py**: autenticación y protección de rutas.
+- **schemas/**: validación de datos de entrada.
+- **legacy/**: archivos antiguos, no usarlos para desarrollo.
+
+# 9. RECOMENDACIONES FINALES
+----------------------------
+- Lee y sigue las instrucciones de instalación.
+- Usa Postman para probar los endpoints con los ejemplos dados.
+- Si tienes dudas, revisa los comentarios en el código y esta documentación.
+- No dudes en preguntar cualquier cosa, por mínima que sea.

@@ -1,119 +1,92 @@
-INSTRUCCIONES DE INSTALACIÓN MIPECUARIO WEB BACKEND
-=================================================
+INSTRUCCIONES DE INSTALACIÓN MIPECUARIO WEB BACKEND (2025/06/21)
+==========================================================
 
-0.0 Estas instrucciones cubren la instalación, configuración y pruebas del backend, incluyendo autenticación JWT, logout seguro y manejo correcto de sesiones de base de datos.
+0. INSTALACIÓN Y USO DE POETRY
+------------------------------
+- Poetry es el gestor de dependencias y entornos virtuales recomendado para este proyecto.
+- Instala Poetry en tu sistema (no dentro del repositorio):
+  - En Windows PowerShell:
+    (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
+  - En Linux/Mac:
+    curl -sSL https://install.python-poetry.org | python3 -
+- Cierra y vuelve a abrir la terminal, o agrega Poetry al PATH si es necesario.
+- Verifica la instalación con:
+  poetry --version
+- No subas ni instales Poetry dentro del repositorio, cada usuario debe instalarlo en su sistema.
+- Si tienes problemas con la instalación, consulta la documentación oficial: https://python-poetry.org/docs/
 
-1. REQUISITOS PREVIOS
----------------------
-1.1 Software Necesario:
-    - Python 3.x
-    - MySQL
-    - Git (opcional, para control de versiones)
-    - Ngrok
-    - Poetry (gestor de dependencias y entornos virtuales)
-
-1.2 Versiones Recomendadas:
-    - Python: 3.8 o superior
-    - MySQL: 8.0 o superior
-    - Ngrok: Última versión estable
-    - Poetry: Última versión estable
-
-2. PREPARACIÓN DEL ENTORNO CON POETRY
--------------------------------------
-2.1 Instalar Poetry en el sistema (no dentro del repositorio):
-    - En Windows PowerShell, ejecuta:
-      (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
-    - Cierra y vuelve a abrir la terminal, o agrega Poetry al PATH si es necesario.
-    - Verifica la instalación con:
-      poetry --version
-
-2.2 Clonar el repositorio:
-    git clone <URL_DEL_REPOSITORIO>
-    cd <NOMBRE_DEL_REPOSITORIO>
-
-2.3 Instalar las dependencias del proyecto:
-    poetry install
-    # Esto creará un entorno virtual y descargará todas las dependencias listadas en pyproject.toml y poetry.lock.
-
-2.4 Activar el entorno virtual de Poetry:
-    poetry shell
-    # Ahora puedes ejecutar scripts y comandos dentro del entorno virtual.
-
-2.5 (Adicional) Si necesitas instalar nuevas dependencias:
-    poetry add <nombre_paquete>
-    # Para dependencias de desarrollo:
-    poetry add --dev <nombre_paquete>
-
-2.6 No es necesario instalar ni subir el entorno virtual al repositorio, Poetry lo gestiona automáticamente fuera de la carpeta del proyecto.
-
-3. CONFIGURACIÓN DE BASE DE DATOS
---------------------------------
-3.1 Crear Base de Datos:
-    - Abrir MySQL
-    - Crear nueva base de datos llamada 'mipecuario'
-    - Asegurarse de que el usuario tenga todos los privilegios
-
-3.2 Configurar Variables de Entorno:
-    Crear archivo .env en la raíz del proyecto con:
-    DB_USER=tu_usuario
-    DB_PASSWORD=tu_contraseña
-    DB_HOST=localhost
-    DB_NAME=mipecuario
-    DB_PORT=3306
-    SMTP_SERVER=smtp.gmail.com
-    SMTP_USER=tu_email@gmail.com
-    SMTP_PASSWORD=tu_contraseña_email
-    RESET_PASSWORD_URL=http://localhost:3000/reset-password
-
-4. CONFIGURACIÓN DE NGROK
+1. CLONAR EL REPOSITORIO
 ------------------------
-4.1 Instalar Ngrok:
-    - Descargar ngrok desde https://ngrok.com/download
-    - Extraer el archivo en una ubicación accesible
-    - Agregar la ruta al PATH del sistema
+git clone <URL_DEL_REPO>
+cd <NOMBRE_DEL_REPO>
 
-4.2 Configurar Token:
-    - El token ya está configurado en Aqui_empece.py o en .env
+2. INSTALAR DEPENDENCIAS CON POETRY
+-----------------------------------
+poetry install
+- Esto creará un entorno virtual y descargará todas las dependencias listadas en pyproject.toml y poetry.lock.
+- Si agregas nuevas dependencias, usa:
+  poetry add <paquete>
+- Para dependencias de desarrollo:
+  poetry add --dev <paquete>
+- Para actualizar todas las dependencias:
+  poetry update
+- Para actualizar una dependencia específica:
+  poetry update <paquete>
 
-5. ESTRUCTURA DE ARCHIVOS
-------------------------
-5.1 Verificar que existan todos los archivos:
-    MiPecuarioWeb_BE/
-    ├── Aqui_empece.py
-    ├── Base_De_Datos_cam.py
-    ├── forms_DB_CAM.py
-    ├── routes.py
-    ├── esquemas.py
-    ├── requirements.txt
-    ├── .env
-    └── documentacion_backend.txt
+3. CONFIGURAR VARIABLES DE ENTORNO
+----------------------------------
+- Crea un archivo .env en la raíz del proyecto (puedes copiar y renombrar .env.example).
+- .env.example contiene todas las claves necesarias y valores de ejemplo para facilitar la configuración.
+- Debe contener las variables: DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME, NGROK_AUTH_TOKEN, SMTP_SERVER, SMTP_USER, SMTP_PASSWORD, etc.
 
-6. EJECUCIÓN DEL PROYECTO
-------------------------
-6.1 Activar Entorno Virtual:
-    poetry shell
+4. ACTIVAR EL ENTORNO VIRTUAL
+-----------------------------
+poetry shell
+- Esto activa el entorno virtual creado por Poetry.
+- Todos los comandos de Python y Flask deben ejecutarse dentro de este entorno.
 
-6.2 Ejecutar la Aplicación:
-    python Aqui_empece.py
+5. EJECUTAR LA API
+------------------
+python app.py
+- Esto inicia Flask y expone la API automáticamente con ngrok.
+- La URL pública aparecerá en consola.
 
-7. PRUEBAS Y USO DE POSTMAN
+6. ESTRUCTURA DEL PROYECTO
 --------------------------
-7.1 Probar endpoints de login, registro, logout y rutas protegidas
-7.2 Enviar el token en el header Authorization: Bearer <token>
-7.3 Verificar que tras logout, el token no funcione más
-7.4 Verificar respuestas de error y mensajes claros
+- app.py: punto de entrada principal.
+- routes/: rutas de la API (auth, user, lote, animal).
+- models/: modelos SQLAlchemy.
+- db/: configuración de la base de datos.
+- schemas/: validaciones Pydantic.
+- utils/: utilidades (JWT, email, etc).
+- legacy/: archivos antiguos, no usarlos para desarrollo.
 
-8. NOTAS DE SEGURIDAD Y BUENAS PRÁCTICAS
-----------------------------------------
-8.1 Cambiar JWT_SECRET_KEY en producción
-8.2 Configurar CORS adecuadamente
-8.3 Usar HTTPS en producción
-8.4 Implementar rate limiting si es necesario
-8.5 No exponer datos sensibles en respuestas
-8.6 Validar siempre los datos de entrada
+7. NOTAS Y BUENAS PRÁCTICAS
+---------------------------
+- No subas .env al repositorio, provee .env.example.
+- Usa imports absolutos y ejecuta siempre desde la raíz.
+- Si agregas dependencias, usa poetry add <paquete>.
+- Si tienes problemas de importación, revisa los __init__.py.
+- Elimina archivos legacy solo si no los necesitas.
+- Documenta cualquier cambio importante en la estructura.
+- Consulta la documentación oficial de Poetry para resolver dudas: https://python-poetry.org/docs/
 
-9. MANTENIMIENTO Y ACTUALIZACIÓN
--------------------------------
-9.1 poetry update para actualizar dependencias
-9.2 poetry add <paquete> para agregar nuevas
-9.3 Consultar la documentación oficial: https://python-poetry.org/docs/
+8. USO BÁSICO DE GIT PARA TRABAJO EN EQUIPO
+-------------------------------------------
+- Para agregar archivos nuevos o modificados al área de preparación:
+  git add <archivo>            # O usa git add . para todos los archivos
+- Para guardar los cambios en el historial local:
+  git commit -m "Mensaje claro de lo que hiciste"
+- Para enviar tus cambios al repositorio remoto:
+  git push
+- Para traer los últimos cambios del repositorio remoto:
+  git pull
+- Para ver el estado de tus archivos:
+  git status
+- Para ver el historial de commits:
+  git log
+- Recomendaciones:
+  - Haz commits frecuentes y con mensajes descriptivos.
+  - Haz pull antes de empezar a trabajar para evitar conflictos.
+  - No subas archivos sensibles como .env.
+  - Usa ramas (branches) para nuevas funcionalidades si el equipo lo requiere.

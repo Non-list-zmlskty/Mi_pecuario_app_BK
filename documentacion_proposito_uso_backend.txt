@@ -1,0 +1,87 @@
+Documentacion proposito y uso del backend para la aplicacion de ganaderia movil, "MiPecuarioApp"
+====================================================================================
+
+Este documento explica el propósito, uso y justificación de cada parte del backend de MiPecuarioApp, así como casos de uso, intención de las rutas y el enfoque profesional y educativo del proyecto.
+
+1. PROPÓSITO GENERAL DEL PROYECTO
+----------------------------------
+MiPecuarioApp es una aplicación móvil y backend diseñada para facilitar la gestión de ganado, lotes y registros productivos en el sector ganadero. El backend provee una API robusta, segura y escalable, siguiendo buenas prácticas profesionales, pero con un enfoque educativo y abierto a sugerencias de docentes y evaluadores.
+
+2. ESTRUCTURA Y ORGANIZACIÓN DEL CÓDIGO
+----------------------------------------
+- **app.py**: Punto de entrada principal. Configura la app Flask, registra los Blueprints de rutas y expone la API con ngrok para pruebas y acceso remoto.
+- **.env y .env.example**: Variables de entorno para configuración segura y flexible (base de datos, correo, ngrok, etc.).
+- **routes/**: Carpeta que agrupa los endpoints de la API por dominio (auth, user, lote, animal). Cada archivo es un Blueprint de Flask.
+- **models/**: Modelos SQLAlchemy que representan las tablas y relaciones de la base de datos.
+- **db/session.py**: Configuración de la conexión a la base de datos usando SQLAlchemy y variables de entorno.
+- **schemas/**: Esquemas Pydantic para validación de datos de entrada.
+- **utils/**: Utilidades como autenticación JWT, envío de correos, etc.
+- **legacy/**: Archivos antiguos, no usados en desarrollo actual, pero conservados como referencia.
+
+3. ¿POR QUÉ ESTA ORGANIZACIÓN?
+------------------------------
+- Facilita el mantenimiento, la colaboración y la escalabilidad.
+- Permite que cada parte del sistema sea independiente y fácil de entender.
+- Sigue patrones profesionales de desarrollo backend (separación de responsabilidades, modularidad, uso de Blueprints, variables de entorno, etc.).
+- Es ideal para equipos y para proyectos educativos donde se evalúa la claridad y buenas prácticas.
+
+4. RUTAS Y ENDPOINTS: INTENCIÓN Y CASOS DE USO
+----------------------------------------------
+- **routes/auth_routes.py**: Maneja autenticación, login, logout, refresh de tokens, recuperación de contraseña. Protege rutas sensibles con JWT.
+  - *Caso de uso*: Un usuario inicia sesión, obtiene un token y puede acceder a sus datos.
+- **routes/user_routes.py**: Permite consultar el perfil del usuario autenticado.
+  - *Caso de uso*: El usuario revisa o edita su información personal.
+- **routes/lote_routes.py**: Permite registrar y consultar lotes de ganado asociados a un usuario.
+  - *Caso de uso*: Un productor crea un nuevo lote para organizar su ganado.
+- **routes/animal_routes.py**: Permite registrar grupos de animales, consultar fichas, y realizar cálculos relacionados (peso promedio, total, etc.).
+  - *Caso de uso*: El usuario registra un grupo de vacas lecheras, consulta sus fichas y obtiene cálculos de peso.
+
+5. MODELOS Y BASE DE DATOS
+--------------------------
+- Cada modelo en `models/models.py` representa una tabla real en la base de datos (Usuario, Lote, Animal, etc.).
+- Las relaciones entre modelos permiten consultas eficientes y seguras.
+- La conexión se realiza usando SQLAlchemy y se configura en `db/session.py` con variables de entorno.
+
+6. VALIDACIÓN Y SEGURIDAD
+-------------------------
+- Se usan esquemas Pydantic para validar los datos de entrada y evitar errores o ataques comunes.
+- JWT protege las rutas sensibles y permite manejar sesiones de usuario de forma segura.
+- El uso de variables de entorno evita exponer datos sensibles en el código fuente.
+
+7. UTILIDADES Y BUENAS PRÁCTICAS
+--------------------------------
+- El envío de correos (recuperación de contraseña, códigos de verificación) se maneja en `utils/email_utils.py`.
+- La autenticación y protección de rutas está en `utils/jwt_utils.py`.
+- El uso de ngrok permite exponer la API para pruebas externas sin necesidad de desplegar en un servidor público.
+
+8. CASOS DE USO CON POSTMAN (EJEMPLOS)
+---------------------------------------
+- **Registrar animales:**
+  - POST `/api/animal/registrar` con body JSON:
+    ```json
+    {"genero": "Hembra", "proposito": "Lechera", "raza": "Holstein", "cantidad": 10}
+    ```
+- **Consultar fichas:**
+  - GET `/api/animal/mis-fichas` con header Authorization: Bearer <token>
+- **Registrar lote:**
+  - POST `/api/lote/registrar` con body JSON:
+    ```json
+    {"nombre": "Lote 1", "grupo_id": 2}
+    ```
+- **Consultar lotes:**
+  - GET `/api/lote/mis-lotes` con header Authorization: Bearer <token>
+- **Cálculo de pesos:**
+  - POST `/api/animal/calculo-pesos` con body JSON:
+    ```json
+    {"genero": "Hembra", "proposito": "Lechera", "cantidad": 10}
+    ```
+
+9. ENFOQUE PROFESIONAL Y EDUCATIVO
+----------------------------------
+- El proyecto busca ser simple pero profesional, mostrando cómo se estructura un backend real.
+- Está abierto a interpretaciones, mejoras y sugerencias de docentes y evaluadores.
+- La modularidad y claridad facilitan el aprendizaje y la colaboración.
+
+10. MENSAJE FINAL
+-----------------
+Este backend está pensado para ser una base sólida, clara y profesional para MiPecuarioApp, pero también como ejemplo educativo de cómo organizar y documentar un proyecto real. Si tienes dudas, sugerencias o encuentras algo que no entiendas, no dudes en preguntar o proponer mejoras.
