@@ -40,6 +40,9 @@ RESET_PASSWORD_URL = os.getenv('RESET_PASSWORD_URL', 'http://localhost:3000/rese
 
 api = Blueprint('api', __name__)
 
+# Blocklist en memoria para tokens JWT revocados
+jwt_blocklist = set()
+
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -56,6 +59,9 @@ def token_required(f):
 
         try:
             payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=['HS256'])
+            # Usar el token completo como identificador en la blocklist
+            if token in jwt_blocklist:
+                return jsonify({"error": "Token revocado"}), 401
             current_user = SessionLocal().query(Usuario).filter_by(usuario_id=payload['user_id']).first()
         except jwt.ExpiredSignatureError:
             return jsonify({"error": "Token expirado"}), 401
@@ -597,3 +603,54 @@ def obtener_fichas_usuario(current_user):
 # def editar_animal(current_user, animal_id):
 #     ...
 # ------------------------------------------------------------
+#-------------------------------------------------------------uncommited ------------------------------------------------------------
+@api.route('/calculo/pesos', methods=['POST'])
+def calcular_pesos():
+    """
+    Calcula el peso promedio individual y el peso total del lote según género y propósito.
+    Espera: { "genero": str, "proposito": str, "cantidad": int }
+    """
+    data = request.get_json()
+    required_fields = ['genero', 'proposito', 'cantidad']
+    if not data or not all(field in data for field in required_fields):
+        return jsonify({"error": "Faltan campos requeridos"}), 400
+
+    genero = data['genero']
+    proposito = data['proposito']
+    cantidad = data['cantidad']
+
+    # Pesos promedio de referencia (puedes ajustar estos valores según tu lógica)
+    pesos_referencia = {
+        # (genero, proposito): peso_promedio_kg
+        ('Hembra', 'Lechera'): 550,
+        ('Hembra', 'Cría'): 450,
+        ('Hembra', 'Ceba'): 500,
+        ('Hembra', 'Levante'): 400,
+        ('Macho', 'Lechera'): 600,
+        ('Macho', 'Cría'): 480,
+        ('Macho', 'Ceba'): 650,
+        ('Macho', 'Levante'): 420,
+    }
+    peso_individual = pesos_referencia.get((genero, proposito), 500)
+    peso_total = peso_individual * cantidad
+
+    return jsonify({
+        "peso_promedio_individual": peso_individual,
+        "peso_total_lote": peso_total,
+        "genero": genero,
+        "proposito": proposito,
+        "cantidad": cantidad
+    }), 200
+
+@api.route('/auth/logout', methods=['POST'])
+@token_required
+def logout(current_user):
+    auth_header = request.headers.get('Authorization', None)
+    if not auth_header:
+        return jsonify({"error": "Token no proporcionado"}), 401
+    try:
+        token = auth_header.split(" ")[1]
+        jwt_blocklist.add(token)
+        return jsonify({"message": "Successfully logged out"}), 200
+    except Exception as e:
+        return jsonify({"error": "Token inválido"}), 401
