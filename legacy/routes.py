@@ -1,3 +1,20 @@
+"""
+[ARCHIVO OBSOLETO]
+Este archivo centralizaba todas las rutas (endpoints) de la API, gestionando la lógica de acceso a la base de datos y la definición de endpoints.
+
+Motivos de inutilización:
+- La lógica de rutas fue migrada a blueprints separados en la carpeta `routes/` para mejorar la modularidad y escalabilidad.
+- Cada entidad (auth, usuario, lote, animal) tiene ahora su propio archivo de rutas.
+
+Comparativa con la versión actual (`routes/*.py`):
+- Antes: Todas las rutas en un solo archivo, dificultando el mantenimiento.
+- Ahora: Rutas separadas por entidad, fácil de localizar y modificar.
+- Antes: Problemas de concurrencia y manejo de sesiones.
+- Ahora: Buenas prácticas en el manejo de sesiones y modularidad.
+- Antes: Dificultad para agregar nuevas funcionalidades.
+- Ahora: Estructura preparada para crecimiento y colaboración.
+"""
+
 # routes.py
 # Este archivo ha sido migrado a la nueva estructura modular.
 # Toda la lógica de endpoints ahora se encuentra en:
