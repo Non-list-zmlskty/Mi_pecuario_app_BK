@@ -1,3 +1,5 @@
+from dotenv import load_dotenv
+load_dotenv()
 import os
 import smtplib
 from email.mime.text import MIMEText
@@ -14,9 +16,11 @@ def send_reset_code_email(email, code):
     SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
     SMTP_USER = os.getenv('SMTP_USER')
     SMTP_PASSWORD = os.getenv('SMTP_PASSWORD')
+    if not SMTP_USER or not SMTP_PASSWORD:
+        raise ValueError("SMTP_USER y SMTP_PASSWORD deben estar definidos en las variables de entorno.")
     subject = str(Header("Peticion de codigo de recuperacion M.P.A", "utf-8"))
-    # Ruta local del banner
-    banner_path = r"c:\Users\Nslksss\Pictures\IMG_MPA_EMAIL\Banner 1 Pecuario App.png"
+    # Usa una ruta configurable o relativa
+    banner_path = os.getenv('BANNER_PATH', r"c:\Users\ksrxz-1123247\Pictures\IMG_MPA_EMAIL\Banner 1 Pecuario App.png")
     body = f"""
     <div style='font-family: Arial, sans-serif; background: #faf6e7; padding: 24px;'>
         <div style='text-align:center; margin-bottom:24px;'>
@@ -33,7 +37,7 @@ def send_reset_code_email(email, code):
         <p>Atentamente,<br>El equipo de programación M.P.A.</p>
     </div>
     """
-    msg = MIMEMultipart()
+    msg = MIMEMultipart('related')
     msg['Subject'] = subject
     msg['From'] = SMTP_USER
     msg['To'] = email
@@ -43,7 +47,9 @@ def send_reset_code_email(email, code):
         with open(banner_path, 'rb') as img:
             mime_img = MIMEImage(img.read())
             mime_img.add_header('Content-ID', '<bannerpecuario>')
+            mime_img.add_header('Content-Disposition', 'inline', filename=os.path.basename(banner_path))
             msg.attach(mime_img)
+        print(f"Banner adjuntado correctamente: {banner_path}")
     except Exception as e:
         print(f"No se pudo adjuntar el banner: {str(e)}")
     try:

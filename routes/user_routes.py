@@ -9,10 +9,12 @@ user_bp = Blueprint('user', __name__, url_prefix='/api/user')
 @token_required
 def user_profile(current_user):
     try:
+        if not current_user:
+            return jsonify({"error": "Usuario no autenticado"}), 401
         return jsonify({
             "id": str(current_user.usuario_id),
             "nombre": current_user.nombre,
             "email": current_user.email
         }), 200
     except Exception as e:
-        return jsonify({"error": "Error al obtener el perfil"}), 500
+        return jsonify({"error": f"Error al obtener el perfil: {str(e)}"}), 500

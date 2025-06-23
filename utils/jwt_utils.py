@@ -2,10 +2,14 @@ import jwt
 from flask import request, jsonify
 from functools import wraps
 from datetime import datetime, timedelta
+from db.session import SessionLocal
+from models.models import Usuario
+import os
 
-JWT_SECRET_KEY = "tu_clave_secreta_muy_segura"
-JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
-JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
+# Usa la clave secreta y expiraciones desde el entorno
+JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "clave_por_defecto")
+JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=12)  # 12 horas de duración
+JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)  # 30 días de duración
 
 jwt_blocklist = set()
 
@@ -25,7 +29,17 @@ def token_required(f):
             payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=['HS256'])
             if token in jwt_blocklist:
                 return jsonify({"error": "Token revocado"}), 401
-            return f(payload, *args, **kwargs)
+            user_id = payload.get('user_id')
+            if not user_id:
+                return jsonify({"error": "Token sin user_id"}), 401
+            db = SessionLocal()
+            try:
+                usuario = db.query(Usuario).filter_by(usuario_id=user_id).first()
+                if not usuario:
+                    return jsonify({"error": "Usuario no encontrado"}), 401
+                return f(usuario, *args, **kwargs)
+            finally:
+                db.close()
         except jwt.ExpiredSignatureError:
             return jsonify({"error": "Token expirado"}), 401
         except jwt.InvalidTokenError:

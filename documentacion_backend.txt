@@ -6,159 +6,131 @@ además de incomprensible por momentos. Busco que entiendas de la mejor forma to
 DOCUMENTACIÓN BACKEND MIPECUARIO (2024)
 ========================================
 
+# INTRODUCCIÓN GENERAL
+----------------------
+Esta documentación está pensada para personas que manejan bases de datos y tienen poco o ningún conocimiento sobre cómo funciona un backend, especialmente en este proyecto. Aquí te explico de forma sencilla cómo se conecta y organiza el backend con la base de datos, cómo se comunican, y por qué tu trabajo es fundamental para que todo funcione correctamente.
+
+# ¿QUÉ ES EL BACKEND?
+---------------------
+El backend es la parte del sistema que se encarga de recibir las solicitudes de la app o la web, procesarlas y devolver respuestas. Por ejemplo, cuando alguien registra un animal, el backend recibe esos datos y los guarda en la base de datos. El backend también consulta la base de datos para mostrar información en la app.
+
 # 1. ESTRUCTURA Y ORGANIZACIÓN DEL PROYECTO
 --------------------------------------------
-El backend ahora está organizado en módulos y Blueprints para que cada parte del sistema sea independiente, legible y fácil de mantener. Antes, todo estaba en un solo archivo grande, lo que dificultaba la comprensión y el mantenimiento. Ahora:
-- **routes/**: contiene los endpoints de la API, separados por dominio (auth, user, lote, animal).
-- **models/**: contiene los modelos SQLAlchemy que representan las tablas de la base de datos.
-- **db/session.py**: configuración de la conexión a la base de datos usando variables de entorno.
-- **schemas/**: validaciones y esquemas Pydantic.
-- **utils/**: utilidades como JWT, email, etc.
-- **legacy/**: archivos antiguos, solo referencia.
+- El backend está modularizado usando Blueprints de Flask.
+- Cada dominio (auth, user, lote, animal) tiene su propio archivo en `routes/`.
+- Modelos SQLAlchemy en `models/models.py`.
+- Conexión a base de datos centralizada en `db/session.py` usando variables de entorno (`.env`).
+- Utilidades (JWT, email, etc.) en `utils/`.
+- Validaciones en `schemas/`.
+- Archivos legacy solo como referencia.
 
-# 2. CONEXIÓN CON LA BASE DE DATOS
-----------------------------------
-La conexión se realiza en `db/session.py` usando SQLAlchemy y las variables de entorno del archivo `.env`. Ejemplo de conexión:
+# 2. ¿CÓMO SE CONECTA EL BACKEND A LA BASE DE DATOS?
+----------------------------------------------------
+El backend usa un archivo llamado `.env` donde se guardan los datos de conexión (usuario, contraseña, nombre de la base, etc.). Así, si cambias algo en la base de datos, solo tienes que actualizar este archivo.
 
+Ejemplo de `.env`:
 ```
-DB_USER=usuario
-DB_PASSWORD=contraseña
+DB_USER=tu_usuario
+DB_PASSWORD=tu_contraseña
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_NAME=MiPecuarioWed
+JWT_SECRET_KEY=tu_clave_secreta
 ```
+El archivo `db/session.py` lee estos datos y permite que el backend hable con la base de datos.
 
-El archivo `db/session.py` carga estas variables y crea el engine y la sesión para todas las operaciones con la base de datos.
-
-# 3. MODELOS (models/models.py)
--------------------------------
-Cada clase representa una tabla en la base de datos. Ejemplo:
-- **Usuario**: usuarios del sistema.
-- **Lote**: lotes de ganado asociados a un usuario.
-- **Animal**: animales asociados a un lote.
-- **Grupo, Alimento, NutriAlimento, SeguimientoAlimento, PesoLote, Alertas**: otras entidades relacionadas.
-
-Cada modelo hereda de `Base` y define sus columnas y relaciones.
-
-# 4. RUTAS Y ENDPOINTS (routes/)
----------------------------------
-Cada archivo en `routes/` es un Blueprint de Flask que agrupa endpoints relacionados.
-
-## 4.1. animal_routes.py
-- **/api/animal/registrar [POST]**: Registra un grupo de animales en un nuevo lote.
-  - **Body JSON ejemplo:**
-    ```json
-    {
-      "genero": "Hembra",
-      "proposito": "Lechera",
-      "raza": "Holstein",
-      "cantidad": 10
-    }
-    ```
-  - **Respuesta exitosa:**
-    ```json
-    {
-      "message": "Ficha registrada exitosamente. 10 animales guardados.",
-      "lote_id": 5,
-      "animales": [
-        {"id": 21, "genero": "Hembra", "raza": "Holstein", "lote_id": 5},
-        ...
-      ]
-    }
-    ```
-- **/api/animal/mis-fichas [GET]**: Devuelve todas las fichas (grupos de animales) del usuario, agrupadas por lote.
-  - **Respuesta ejemplo:**
-    ```json
-    {
-      "fichas": [
-        {"lote_id": 5, "nombre_lote": "Lote Lechera 1234", "genero": "Hembra", "raza": "Holstein", "cantidad": 10},
-        ...
-      ]
-    }
-    ```
-
-## 4.2. lote_routes.py
-- **/api/lote/registrar [POST]**: Registra un nuevo lote para el usuario autenticado.
-  - **Body JSON ejemplo:**
-    ```json
-    {"nombre": "Lote 1", "grupo_id": 2}
-    ```
-- **/api/lote/mis-lotes [GET]**: Devuelve todos los lotes del usuario.
-
-## 4.3. Cálculos de animales (peso promedio y total)
-- Puedes agregar un endpoint tipo `/api/animal/calculo-pesos` que reciba género, propósito y cantidad, y devuelva el peso promedio individual y total:
-  - **Body JSON ejemplo:**
-    ```json
-    {"genero": "Hembra", "proposito": "Lechera", "cantidad": 10}
-    ```
-  - **Respuesta ejemplo:**
-    ```json
-    {"peso_promedio_individual": 550, "peso_total_lote": 5500, "genero": "Hembra", "proposito": "Lechera", "cantidad": 10}
-    ```
-
-# NUEVO: CONSULTA DETALLADA DE FICHA POR LOTE
----------------------------------------------
-- **/api/animal/ficha/<lote_id> [GET]**: Devuelve los datos y cálculos de la ficha seleccionada (lote).
-  - **Uso:** El frontend puede cambiar de ficha (lote) y mostrar los datos y cálculos correspondientes sin recalcular en el cliente.
-  - **Respuesta ejemplo:**
-    ```json
-    {
-      "lote_id": 5,
-      "nombre_lote": "Lote Lechera 1234",
-      "genero": "Hembra",
-      "proposito": "Lechera",
-      "raza": "Holstein",
-      "cantidad": 100,
-      "peso_promedio_individual": 550,
-      "peso_total_lote": 55000
-    }
-    ```
-- **Intención:** Permitir que el frontend consulte y muestre los datos y cálculos de cualquier ficha/lote de forma dinámica, facilitando la navegación y el análisis para el usuario.
-- **Mensaje para Camila:** Ahora puedes ver cómo cada ficha (lote) puede ser consultada de forma independiente y los cálculos se hacen en el backend, asegurando consistencia y facilidad de uso para el frontend.
-
-# 5. FORMULARIO DE REGISTRO DE GANADO (FRONTEND)
-------------------------------------------------
-El formulario que ves en la app móvil envía los datos a `/api/animal/registrar` usando los campos género, propósito, raza y cantidad. El backend los recibe, crea el lote y los animales, y responde con la información registrada.
-
-# 6. CASOS DE USO Y PRUEBAS CON POSTMAN
----------------------------------------
-- **Registrar animales:**
-  - Endpoint: POST `/api/animal/registrar`
-  - Body: (ver ejemplo arriba)
-  - Header: Authorization: Bearer <token>
-- **Consultar fichas:**
-  - Endpoint: GET `/api/animal/mis-fichas`
-  - Header: Authorization: Bearer <token>
-- **Registrar lote:**
-  - Endpoint: POST `/api/lote/registrar`
-  - Body: {"nombre": "Lote 1", "grupo_id": 2}
-  - Header: Authorization: Bearer <token>
-- **Consultar lotes:**
-  - Endpoint: GET `/api/lote/mis-lotes`
-  - Header: Authorization: Bearer <token>
-
-# 7. POR QUÉ SE CAMBIÓ LA ORGANIZACIÓN
---------------------------------------
-Antes, todo estaba en un solo archivo, lo que hacía difícil entender, mantener y escalar el sistema. Ahora, cada parte está separada:
-- **Rutas**: cada dominio tiene su archivo.
-- **Modelos**: todos en un solo lugar.
-- **Conexión a base de datos**: centralizada y usando variables de entorno.
-- **Utilidades**: JWT, email, etc., en archivos aparte.
-Esto facilita el trabajo en equipo, la depuración y la extensión del sistema.
-
-# 8. MENSAJES Y UTILIDAD DE CADA PARTE DEL CÓDIGO
+# 3. ¿CÓMO SE RELACIONA TU TRABAJO CON EL BACKEND?
 --------------------------------------------------
-- **routes/animal_routes.py**: lógica de registro y consulta de animales.
-- **routes/lote_routes.py**: lógica de registro y consulta de lotes.
-- **models/models.py**: definición de las tablas y relaciones de la base de datos.
-- **db/session.py**: conexión y sesión con la base de datos.
-- **utils/jwt_utils.py**: autenticación y protección de rutas.
-- **schemas/**: validación de datos de entrada.
-- **legacy/**: archivos antiguos, no usarlos para desarrollo.
+Cada vez que creas o modificas una tabla, el backend debe saberlo para poder guardar o leer datos correctamente. Por eso, los modelos en `models/models.py` deben estar sincronizados con la estructura real de la base de datos.
 
-# 9. RECOMENDACIONES FINALES
+Por ejemplo:
+- Si agregas un campo nuevo a la tabla `Lote`, hay que agregarlo también en el modelo `Lote` en Python.
+- Si cambias el tipo de dato de un campo, hay que actualizarlo en el modelo.
+
+# 4. ¿CÓMO FUNCIONAN LOS ENDPOINTS?
+------------------------------------
+Un endpoint es como una "puerta" por donde la app pide o envía información. Por ejemplo:
+- `/api/animal/registrar`: la app envía los datos de un nuevo animal y el backend los guarda en la base de datos.
+- `/api/animal/mis-fichas`: la app pide la lista de fichas (lotes) y el backend responde con los datos que están en la base.
+
+Todos los endpoints importantes están protegidos con un sistema de seguridad llamado JWT (token), para que solo usuarios autenticados puedan acceder.
+
+# 5. AUTENTICACIÓN Y TOKENS JWT
+-------------------------------
+- Los tokens JWT ahora usan la clave secreta y expiraciones definidas en `.env`.
+- El access token dura 12 horas, el refresh token 30 días.
+- El backend lee la clave secreta con `os.environ.get("JWT_SECRET_KEY")`.
+- El frontend puede usar el mismo token varias veces hasta que expire.
+- Se corrigió el bug donde el token expiraba demasiado rápido.
+- El refresh token permite renovar el access token sin reloguear.
+
+# 6. BASE DE DATOS Y MODELOS
 ----------------------------
-- Lee y sigue las instrucciones de instalación.
-- Usa Postman para probar los endpoints con los ejemplos dados.
-- Si tienes dudas, revisa los comentarios en el código y esta documentación.
-- No dudes en preguntar cualquier cosa, por mínima que sea.
+- El campo `cantidad` en la tabla `Lote` ahora se actualiza correctamente y es usado para cálculos de peso.
+- Se corrigieron registros nulos en `cantidad` con un update masivo.
+- Los modelos reflejan la estructura real de la base de datos.
+- Los cálculos de peso promedio individual y total usan correctamente los datos de `PesoLote` y `cantidad`.
+
+# 7. ENDPOINTS Y LÓGICA DE NEGOCIO
+----------------------------------
+- `/api/animal/registrar`: Registra un lote y animales, guarda la cantidad.
+- `/api/animal/mis-fichas`: Devuelve fichas del usuario, incluye cálculos de peso.
+- `/api/animal/ficha/<lote_id>`: Devuelve detalle y cálculos de una ficha/lote.
+- `/api/animal/lote/<lote_id>/pesos`: Devuelve peso total y promedio individual, usando peso real o estimado si no hay registro.
+- `/api/lote/registrar`: Registra un nuevo lote.
+- `/api/lote/mis-lotes`: Devuelve lotes del usuario.
+- `/api/user/profile`: Devuelve perfil del usuario autenticado.
+- Todos los endpoints protegidos usan el decorador `@token_required` que valida el JWT.
+
+# 8. MANEJO DE ERRORES Y SEGURIDAD
+----------------------------------
+- Mejor manejo de errores en autenticación (401 para token expirado, inválido o revocado).
+- Uso de blocklist para tokens revocados (logout).
+- Validación de datos de entrada con Pydantic en `schemas/`.
+- Manejo de errores de base de datos y lógica de negocio.
+
+# 9. CONFIGURACIÓN Y VARIABLES DE ENTORNO
+-----------------------------------------
+- `.env` contiene todas las variables sensibles y de configuración.
+- `config.py` y utilidades leen las variables desde el entorno.
+- Ejemplo de `.env`:
+  ```
+  DB_USER=...
+  DB_PASSWORD=...
+  JWT_SECRET_KEY=...
+  ```
+
+# 10. RECOMENDACIONES Y BUENAS PRÁCTICAS
+----------------------------------------
+- Siempre registrar la cantidad de animales al crear un lote.
+- Mantener sincronizados los relojes del servidor y clientes para evitar problemas de expiración de tokens.
+- Usar Postman o herramientas similares para probar los endpoints.
+- Revisar los logs del backend para depurar errores de autenticación o datos.
+- Si agregas o quitas animales de un lote, actualiza el campo `cantidad`.
+- Si tienes dudas sobre cómo se usan los datos en el backend, pregunta al equipo.
+- Usa herramientas como DBeaver o phpMyAdmin para revisar los datos y asegurarte de que todo esté bien.
+
+# 11. CAMBIOS RECIENTES Y BUGS SOLUCIONADOS
+-------------------------------------------
+- Centralización de la clave secreta JWT y expiraciones.
+- Corrección de bug de expiración temprana de tokens.
+- Actualización masiva de campo `cantidad` en lotes existentes.
+- Mejoras en la consulta y cálculo de pesos.
+- Refactorización de rutas y modularización.
+- Documentación y ejemplos actualizados para el equipo frontend.
+
+# 12. EJEMPLOS DE USO Y RESPUESTAS
+----------------------------------
+- Ver ejemplos de requests y responses en los endpoints de animal y lote.
+- El frontend debe consumir los campos tal como los envía el backend (`peso_individual_estimado`, `peso_general_lote`, etc.).
+
+# 13. CONTACTO Y SOPORTE
+------------------------
+- Si tienes dudas, revisa esta documentación y los comentarios en el código.
+- Pregunta cualquier cosa al equipo de backend para aclarar lógica o estructura.
+
+# 14. MENSAJE FINAL PARA CAMILA
+-------------------------------
+Camila PORFAVOR si terminaste de leer todo esto ESCRIBEME el codigo 1212424 para saber que entendiste y leiste esta documentacion dedicada para tu entendimiento sobre este proyecto en lo que respecta a tu parte e involucracion con esta.
+
+FIN DE DOCUMENTACIÓN ACTUALIZADA (JUNIO 2025)

@@ -8,6 +8,8 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 import jwt
 import random
+from config import JWT_SECRET_KEY
+import os
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -55,12 +57,14 @@ def logout(current_user):
         return jsonify({"error": "Token inválido"}), 401
 
 @auth_bp.route('/refresh', methods=['POST'])
+@auth_bp.route('/refresh-token', methods=['POST'])  # Compatibilidad con frontend
 def refresh_token():
     data = request.get_json()
     if not data or 'refreshToken' not in data:
         return jsonify({"error": "Refresh token no proporcionado"}), 400
     try:
-        payload = jwt.decode(data['refreshToken'], token_required.JWT_SECRET_KEY, algorithms=['HS256'])
+        jwt_secret = os.environ.get("JWT_SECRET_KEY")
+        payload = jwt.decode(data['refreshToken'], jwt_secret, algorithms=['HS256'])
         user_id = payload['user_id']
         access_token, refresh_token = generate_tokens(user_id)
         return jsonify({
@@ -145,3 +149,61 @@ def reset_password_with_code():
         return jsonify({"error": "Error al restablecer la contraseña"}), 500
     finally:
         db.close()
+
+@auth_bp.route('/register', methods=['POST'])
+def register():
+    data = request.get_json()
+    if not data or 'email' not in data or 'password' not in data or 'name' not in data:
+        return jsonify({"error": "Nombre, email y contraseña requeridos"}), 400
+    email = data['email']
+    password = data['password']
+    name = data['name']
+    db = SessionLocal()
+    try:
+        if db.query(Usuario).filter_by(email=email).first():
+            return jsonify({"error": "El usuario ya existe"}), 409
+        hashed_password = pwd_context.hash(password)
+        usuario = Usuario(nombre=name, email=email, hashed_password=hashed_password)
+        db.add(usuario)
+        db.commit()
+        return jsonify({"message": "Usuario creado exitosamente"}), 201
+    except Exception:
+        db.rollback()
+        return jsonify({"error": "Error al crear usuario"}), 500
+    finally:
+        db.close()
+
+# Compatibilidad legacy para rutas de recuperación de contraseña (sin /auth en el prefix)
+from flask import current_app
+
+# Solo registrar si no existen ya (evita duplicados si se importa varias veces)
+def register_legacy_routes(bp):
+    bp.add_url_rule('/login/auth', view_func=login, methods=['POST'])
+    bp.add_url_rule('/logout/auth', view_func=logout, methods=['POST'])
+    bp.add_url_rule('/register/auth', view_func=register, methods=['POST'])
+    bp.add_url_rule('/refresh/auth', view_func=refresh_token, methods=['POST'])
+    bp.add_url_rule('/refresh-token/auth', view_func=refresh_token, methods=['POST'])
+    bp.add_url_rule('/request-reset-code/auth', view_func=request_reset_code, methods=['POST'])
+    bp.add_url_rule('/verify-reset-code/auth', view_func=verify_reset_code, methods=['POST'])
+    bp.add_url_rule('/reset-password-with-code/auth', view_func=reset_password_with_code, methods=['POST'])
+
+# Rutas legacy fuera del prefijo /api/auth (ej: /api/request-reset-code/auth)
+def register_global_legacy_routes(app):
+    app.add_url_rule('/api/login/auth', view_func=login, methods=['POST'])
+    app.add_url_rule('/api/logout/auth', view_func=logout, methods=['POST'])
+    app.add_url_rule('/api/register/auth', view_func=register, methods=['POST'])
+    app.add_url_rule('/api/refresh/auth', view_func=refresh_token, methods=['POST'])
+    app.add_url_rule('/api/refresh-token/auth', view_func=refresh_token, methods=['POST'])
+    app.add_url_rule('/api/request-reset-code/auth', view_func=request_reset_code, methods=['POST'])
+    app.add_url_rule('/api/verify-reset-code/auth', view_func=verify_reset_code, methods=['POST'])
+    app.add_url_rule('/api/reset-password-with-code/auth', view_func=reset_password_with_code, methods=['POST'])
+
+# Registrar rutas legacy en el blueprint
+register_legacy_routes(auth_bp)
+
+# Para registrar las rutas globales, llama a register_global_legacy_routes(app) desde app.py después de registrar los blueprints.
+# Ejemplo en app.py:
+# from routes.auth_routes import register_global_legacy_routes
+# ...
+# app.register_blueprint(auth_bp)
+# register_global_legacy_routes(app)

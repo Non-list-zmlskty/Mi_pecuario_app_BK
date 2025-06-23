@@ -26,6 +26,7 @@ class Lote(Base):
     nombre = Column(String(100))
     usuario_id = Column(Integer, ForeignKey('Usuario.usuario_id'))
     grupo_id = Column(Integer, ForeignKey('Grupo.grupo_id'))
+    cantidad = Column(Integer, nullable=True)  # <-- NUEVO CAMPO
 
 class Animal(Base):
     __tablename__ = 'Animal'
