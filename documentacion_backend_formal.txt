@@ -1,0 +1,143 @@
+DOCUMENTACIÓN TÉCNICA BACKEND - MIPECUARIO
+==========================================
+
+Fecha de actualización: Junio 2025
+
+------------------------------------------------------------
+ÍNDICE
+------------------------------------------------------------
+1. Arquitectura general y frameworks utilizados
+2. Lenguajes y tecnologías
+3. Organización del proyecto
+4. Estructura de carpetas y archivos principales
+5. Modelado de datos y ORM
+6. Seguridad y autenticación
+7. Endpoints principales y lógica de negocio
+8. Manejo de errores y validaciones
+9. Configuración y variables de entorno
+10. Flujo de registro, seguimiento y eliminación de lotes
+11. Recomendaciones y buenas prácticas
+12. Contacto y soporte
+
+------------------------------------------------------------
+1. ARQUITECTURA GENERAL Y FRAMEWORKS UTILIZADOS
+------------------------------------------------------------
+- El backend está construido sobre **Python 3.x** usando el framework **Flask**.
+- Se utiliza **Flask Blueprints** para modularizar la lógica por dominios (auth, user, lote, animal).
+- **SQLAlchemy** es el ORM utilizado para interactuar con la base de datos MySQL.
+- **Pydantic** se usa para validaciones de entrada en algunos endpoints.
+- **PyJWT** para la gestión de tokens JWT.
+- **dotenv** para la gestión de variables de entorno.
+- **Flask-CORS** para permitir peticiones desde el frontend (React Native/Expo).
+- **Pyngrok** para exponer el servidor local a internet durante desarrollo.
+
+------------------------------------------------------------
+2. LENGUAJES Y TECNOLOGÍAS
+------------------------------------------------------------
+- **Python 3.x**: Lenguaje principal del backend.
+- **SQL (MySQL)**: Motor de base de datos relacional.
+- **JavaScript/TypeScript**: Usados en el frontend (no cubierto aquí).
+- **Microlenguajes**: SQL para triggers, funciones almacenadas y validaciones en la base de datos.
+
+------------------------------------------------------------
+3. ORGANIZACIÓN DEL PROYECTO
+------------------------------------------------------------
+- Modularización por dominios usando Blueprints de Flask.
+- Separación clara entre rutas (`routes/`), modelos (`models/`), utilidades (`utils/`), esquemas de validación (`schemas/`), y configuración (`db/`, `.env`).
+- Cada archivo de rutas maneja un dominio específico: autenticación, usuarios, lotes, animales.
+
+------------------------------------------------------------
+4. ESTRUCTURA DE CARPETAS Y ARCHIVOS PRINCIPALES
+------------------------------------------------------------
+- `app.py`: Punto de entrada principal, registro de blueprints y configuración global.
+- `routes/`: Carpeta con los blueprints de cada dominio (`auth_routes.py`, `user_routes.py`, `lote_routes.py`, `animal_routes.py`).
+- `models/models.py`: Definición de modelos SQLAlchemy para todas las tablas.
+- `db/session.py`: Configuración de la conexión a la base de datos usando variables de entorno.
+- `utils/`: Funciones auxiliares (JWT, email, etc.).
+- `schemas/`: Validaciones de entrada con Pydantic.
+- `.env`: Variables sensibles y de configuración.
+- `documentacion_backend.txt` y `documentacion_backend_formal.txt`: Documentación técnica y de referencia.
+
+------------------------------------------------------------
+5. MODELOS DE DATOS Y ORM
+------------------------------------------------------------
+- Todos los modelos reflejan la estructura real de la base de datos MySQL.
+- Relaciones entre tablas implementadas mediante claves foráneas.
+- Integridad referencial asegurada para operaciones de borrado y actualización.
+- Uso de triggers y funciones almacenadas en MySQL para validaciones y lógica de negocio (ej: rango de peso permitido en `PesoLote`).
+
+------------------------------------------------------------
+6. SEGURIDAD Y AUTENTICACIÓN
+------------------------------------------------------------
+- Autenticación basada en **JWT** (JSON Web Tokens).
+- Tokens generados y validados usando una clave secreta definida en `.env`.
+- Access token con duración de 12 horas, refresh token de 30 días.
+- Decorador `@token_required` protege todos los endpoints sensibles.
+- Blocklist de tokens para manejo de logout y revocación.
+- Validación de propiedad de recursos: los usuarios solo pueden acceder, modificar o eliminar sus propios lotes/fichas.
+
+------------------------------------------------------------
+7. ENDPOINTS PRINCIPALES Y LÓGICA DE NEGOCIO
+------------------------------------------------------------
+- **Registro de lotes/fichas**: `/api/animal/registrar` (POST)
+  - Permite registrar lote, animal representativo y peso inicial.
+- **Registro de peso de lote**: `/api/animal/lote/<lote_id>/peso` (POST)
+  - Permite registrar o actualizar el peso real de un lote para seguimiento.
+- **Consulta de fichas/lotes**: `/api/animal/mis-fichas` (GET)
+  - Devuelve todas las fichas del usuario autenticado.
+- **Detalle de ficha/lote**: `/api/animal/ficha/<lote_id>` (GET)
+  - Devuelve detalle y cálculos de una ficha/lote.
+- **Cálculo de dieta personalizada**: `/api/animal/lote/<lote_id>/dieta` (GET)
+  - Calcula la dieta usando el peso más reciente y los datos reales del lote.
+- **Eliminación de lote**: `/api/lote/<lote_id>` (DELETE)
+  - Elimina el lote y todos los datos relacionados si pertenece al usuario.
+- **Otros**: Endpoints para autenticación, perfil de usuario, consulta de lotes, etc.
+
+------------------------------------------------------------
+8. MANEJO DE ERRORES Y VALIDACIONES
+------------------------------------------------------------
+- Validación de datos de entrada en backend y frontend.
+- Mensajes de error claros y detallados en caso de error 400/401/404/500.
+- Validación de rango de peso en la base de datos (trigger MySQL, actualmente 300-700 kg).
+- Validación de propiedad de recursos antes de modificar/eliminar datos.
+- Manejo de errores de autenticación y expiración de tokens.
+
+------------------------------------------------------------
+9. CONFIGURACIÓN Y VARIABLES DE ENTORNO
+------------------------------------------------------------
+- `.env` contiene:
+  - Credenciales de base de datos.
+  - Clave secreta JWT.
+  - Otros parámetros sensibles.
+- `db/session.py` y utilidades leen las variables desde el entorno para mayor seguridad y flexibilidad.
+
+------------------------------------------------------------
+10. FLUJO DE REGISTRO, SEGUIMIENTO Y ELIMINACIÓN DE LOTES
+------------------------------------------------------------
+- **Registro**: El usuario registra una ficha/lote con todos los datos requeridos y opcionalmente el peso inicial.
+- **Seguimiento**: El usuario puede registrar nuevos pesos para el lote en cualquier momento.
+- **Cálculo de dieta**: Siempre usa el peso más reciente registrado.
+- **Eliminación**: El usuario puede eliminar un lote, lo que elimina también animales y pesos relacionados.
+- **Propiedad**: Todas las operaciones validan que el usuario autenticado sea el dueño del lote/ficha.
+
+------------------------------------------------------------
+11. RECOMENDACIONES Y BUENAS PRÁCTICAS
+------------------------------------------------------------
+- Mantener sincronizados los modelos de Python y la estructura de la base de datos.
+- Validar en frontend y backend los datos antes de guardar.
+- Usar Postman o herramientas similares para probar los endpoints.
+- Revisar los logs del backend para depurar errores.
+- Actualizar el campo `cantidad` en `Lote` si se agregan o quitan animales.
+- Notificar al equipo si se realizan cambios en la estructura de la base de datos o triggers.
+- Mantener la clave secreta y credenciales fuera del código fuente (solo en `.env`).
+
+------------------------------------------------------------
+12. CONTACTO Y SOPORTE
+------------------------------------------------------------
+- Para dudas sobre la lógica de negocio, estructura de datos o integración, contactar al equipo de backend.
+- Revisar la documentación y los comentarios en el código antes de realizar cambios.
+- Para soporte de base de datos, contactar al responsable de DBA del proyecto.
+
+------------------------------------------------------------
+FIN DE DOCUMENTACIÓN FORMAL BACKEND MIPECUARIO (JUNIO 2025)
+------------------------------------------------------------
