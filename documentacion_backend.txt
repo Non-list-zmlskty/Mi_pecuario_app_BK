@@ -24,6 +24,92 @@ El backend es la parte del sistema que se encarga de recibir las solicitudes de 
 - Validaciones en `schemas/`.
 - Archivos legacy solo como referencia.
 
+# 1.1. CAMBIOS RECIENTES EN routes/animal_routes.py (JUNIO 2025)
+-----------------------------------------------------------------
+- Ahora el endpoint `/api/animal/registrar` permite registrar el peso inicial de un animal representativo del lote al crear la ficha. Este peso se guarda en la tabla `PesoLote` y es usado para todos los cálculos de dieta y seguimiento.
+- Se agregó la posibilidad de registrar el nombre del animal al crear la ficha. Si no se envía, se asigna un nombre por defecto.
+- Se añadió el endpoint `/api/animal/lote/<lote_id>/peso` (POST) para registrar o actualizar el peso de un lote en cualquier momento, permitiendo el seguimiento real del estado del lote.
+- El endpoint `/api/animal/lote/<lote_id>/dieta` ahora siempre utiliza el peso más reciente registrado en `PesoLote` para calcular la dieta personalizada.
+- Todos los endpoints de animal ahora validan que el usuario autenticado sea dueño del lote/ficha antes de mostrar, modificar o eliminar datos.
+- Se mejoró el manejo de errores: ahora los mensajes de error incluyen detalles útiles para depuración cuando ocurre un error 500.
+- Se recomienda validar en el frontend que el peso esté en el rango permitido por la base de datos (actualmente 300-700 kg) antes de enviar el formulario.
+- El endpoint `/api/animal/mis-fichas` retorna todas las fichas/lotes del usuario autenticado, incluyendo los cálculos de peso y fecha de última actualización.
+- El endpoint `/api/animal/ficha/<lote_id>` retorna el detalle de la ficha, usando los datos reales del lote y animal.
+- El endpoint `/api/animal/lote/<lote_id>/pesos` retorna el peso general y promedio individual del lote, usando el peso real si existe, o un estimado si no hay registro.
+- Se mantiene la lógica para que todos los cálculos de dieta y seguimiento sean sobre datos reales y actualizados, permitiendo un mejor control y personalización para el usuario.
+
+# 1.2. NOTAS PARA EL DESARROLLADOR DE BASES DE DATOS
+-----------------------------------------------------
+- Si cambias la estructura de la tabla `PesoLote`, asegúrate de que los endpoints de animal sigan funcionando correctamente.
+- El trigger en la base de datos para validar el rango de peso fue actualizado a 300-700 kg. Si necesitas cambiar este rango, actualiza el trigger y notifica al equipo de frontend para que ajusten la validación.
+- Si agregas nuevos campos a las tablas `Lote`, `Animal` o `PesoLote`, recuerda actualizar los modelos en `models/models.py` y revisar los endpoints en `routes/animal_routes.py`.
+- El backend depende de la integridad referencial entre `Lote`, `Animal` y `PesoLote` para eliminar correctamente los datos relacionados cuando se elimina un lote.
+- Si necesitas agregar nuevas funcionalidades de seguimiento o cálculo, consulta primero la lógica actual en `routes/animal_routes.py` para mantener la coherencia.
+
+# 1.3. FLUJO DE REGISTRO Y SEGUIMIENTO DE FICHAS/LOTES
+------------------------------------------------------
+- El usuario registra una ficha/lote enviando género, propósito, raza, cantidad y peso inicial (opcional pero recomendado).
+- El backend guarda el lote, el animal representativo y el peso inicial en la base de datos.
+- El usuario puede registrar nuevos pesos para el lote en cualquier momento usando `/api/animal/lote/<lote_id>/peso`.
+- El cálculo de dieta y seguimiento siempre usa el peso más reciente registrado.
+- Todos los endpoints validan la propiedad del usuario sobre el lote antes de mostrar o modificar datos.
+
+# 1.4. EJEMPLOS DE REQUEST Y RESPUESTA ACTUALIZADOS
+---------------------------------------------------
+- Registrar ficha/lote:
+  ```
+  POST /api/animal/registrar
+  {
+    "genero": "Hembra",
+    "proposito": "Lechera",
+    "raza": "Nelore",
+    "cantidad": 10,
+    "peso": 480,
+    "nombre_animal": "Vaca Ejemplo"
+  }
+  ```
+- Registrar nuevo peso:
+  ```
+  POST /api/animal/lote/12/peso
+  {
+    "peso": 500,
+    "fecha": "2025-06-23"
+  }
+  ```
+- Obtener dieta personalizada:
+  ```
+  GET /api/animal/lote/12/dieta
+  ```
+  Respuesta:
+  ```json
+  {
+    "lote_id": 12,
+    "nombre_lote": "Lote Lechera 1234",
+    "proposito": "Lechera",
+    "cantidad_animales": 10,
+    "peso_promedio_individual": 480,
+    "peso_promedio_individual_unidad": "kg",
+    "peso_total_lote": 4800,
+    "peso_total_lote_unidad": "kg",
+    "rango": "medio",
+    "mensaje": "El peso promedio es adecuado. Se recomienda una dieta de mantenimiento.",
+    "materia_seca_recomendada_por_bovino": 12000,
+    "materia_seca_recomendada_por_bovino_unidad": "g",
+    "materia_seca_recomendada_total": 120000,
+    "materia_seca_recomendada_total_unidad": "g",
+    "dieta": [
+      {
+        "alimento": "Forraje Verde",
+        "cantidad_recomendada_por_bovino": 4000.0,
+        "cantidad_recomendada_por_bovino_unidad": "g",
+        "cantidad_recomendada_total": 40000.0,
+        "cantidad_recomendada_total_unidad": "g",
+        "frecuencia": "Diaria"
+      }
+    ]
+  }
+  ```
+
 # 2. ¿CÓMO SE CONECTA EL BACKEND A LA BASE DE DATOS?
 ----------------------------------------------------
 El backend usa un archivo llamado `.env` donde se guardan los datos de conexión (usuario, contraseña, nombre de la base, etc.). Así, si cambias algo en la base de datos, solo tienes que actualizar este archivo.
