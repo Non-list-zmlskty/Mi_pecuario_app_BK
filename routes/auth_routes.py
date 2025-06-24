@@ -64,6 +64,8 @@ def refresh_token():
         return jsonify({"error": "Refresh token no proporcionado"}), 400
     try:
         jwt_secret = os.environ.get("JWT_SECRET_KEY")
+        if not jwt_secret:
+            return jsonify({"error": "Clave secreta JWT no configurada"}), 500
         payload = jwt.decode(data['refreshToken'], jwt_secret, algorithms=['HS256'])
         user_id = payload['user_id']
         access_token, refresh_token = generate_tokens(user_id)
@@ -163,7 +165,10 @@ def register():
         if db.query(Usuario).filter_by(email=email).first():
             return jsonify({"error": "El usuario ya existe"}), 409
         hashed_password = pwd_context.hash(password)
-        usuario = Usuario(nombre=name, email=email, hashed_password=hashed_password)
+        usuario = Usuario()
+        usuario.nombre = name
+        usuario.email = email
+        usuario.hashed_password = hashed_password
         db.add(usuario)
         db.commit()
         return jsonify({"message": "Usuario creado exitosamente"}), 201
